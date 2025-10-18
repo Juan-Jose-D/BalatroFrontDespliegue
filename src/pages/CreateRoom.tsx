@@ -21,12 +21,25 @@ export default function CreateRoom() {
         <h2>Crear sala</h2>
 
         <div style={{ marginTop: 18 }} className="center">
-          <div className="room-code">{code}</div>
+          <div className="roomCode">{code}</div>
         </div>
 
         <div style={{ marginTop: 18 }} className="row center">
-          <Button variant="neutral" onClick={() => nav('/multiplayer')}>Salir</Button>
-          <Button variant="primary" onClick={() => alert('Iniciar partida (pendiente)')}>Jugar</Button>
+          <Button
+            variant="neutral"
+            className="btn btnNeutral"
+            onClick={() => nav('/multiplayer')}
+          >
+            Salir
+          </Button>
+
+          <Button
+            variant="primary"
+            className="btn btnPrimary"
+            onClick={() => alert('Iniciar partida (pendiente)')}
+          >
+            Jugar
+          </Button>
         </div>
       </div>
     </BackgroundWrapper>

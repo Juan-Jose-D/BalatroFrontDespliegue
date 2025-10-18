@@ -6,11 +6,12 @@ import Button from '../components/Button'
 
 export default function HowToPlay() {
   const nav = useNavigate()
+
   const sampleText = `Aquí va la explicación de Balatro. Puedes poner reglas, objetivos y ejemplos.
   Luego colocaremos un video con una guía paso a paso.`
 
   const openVideo = () => {
-    const url = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' // reemplaza por tu link real
+    const url = 'https://www.youtube.com/watch?v=gA8Xtrjg1fA'
     window.open(url, '_blank')
   }
 
@@ -18,15 +19,34 @@ export default function HowToPlay() {
     <BackgroundWrapper image={menuBg}>
       <div className="panel" style={{ width: 720 }}>
         <h2>Cómo jugar</h2>
-        <p style={{ color: 'var(--muted)', whiteSpace: 'pre-line' }}>{sampleText}</p>
+
+        <p style={{ color: 'var(--fontColor)', whiteSpace: 'pre-line' }}>
+          {sampleText}
+        </p>
 
         <div style={{ marginTop: 12 }} className="row">
-          <span className="small-muted">Ver video:</span>
-          <span className="link-like" onClick={openVideo}>Tutorial en YouTube</span>
+          <span className="smallMuted">Ver video:</span>
+          <span
+            className="linkLike"
+            onClick={openVideo}
+            style={{
+              color: 'var(--accentColor)',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            Tutorial en YouTube
+          </span>
         </div>
 
-        <div style={{ marginTop: 14 }}>
-          <Button variant="neutral" onClick={() => nav('/')}>Volver</Button>
+        <div style={{ marginTop: 14 }} className="center">
+          <Button
+            variant="neutral"
+            className="btn btnNeutral"
+            onClick={() => nav('/')}
+          >
+            Volver
+          </Button>
         </div>
       </div>
     </BackgroundWrapper>

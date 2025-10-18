@@ -11,7 +11,7 @@ export default function JoinRoom() {
   const handleSearch = () => {
     if (!code.trim()) return alert('Ingresa un código')
     alert(`Buscando sala: ${code.toUpperCase()}`)
-    // Aquí reemplazas por la llamada al backend / WS
+    // Aquí reemplazas por la llamada real al backend o WebSocket
   }
 
   return (
@@ -30,9 +30,29 @@ export default function JoinRoom() {
         </div>
 
         <div style={{ marginTop: 14 }} className="row center">
-          <Button variant="primary" onClick={handleSearch}>Buscar</Button>
-          <Button variant="neutral" onClick={() => nav('/create')}>Crear sala</Button>
-          <Button variant="neutral" onClick={() => nav('/multiplayer')}>Salir</Button>
+          <Button
+            variant="primary"
+            className="btn btnPrimary"
+            onClick={handleSearch}
+          >
+            Buscar
+          </Button>
+
+          <Button
+            variant="neutral"
+            className="btn btnNeutral"
+            onClick={() => nav('/create')}
+          >
+            Crear sala
+          </Button>
+
+          <Button
+            variant="neutral"
+            className="btn btnNeutral"
+            onClick={() => nav('/multiplayer')}
+          >
+            Salir
+          </Button>
         </div>
       </div>
     </BackgroundWrapper>

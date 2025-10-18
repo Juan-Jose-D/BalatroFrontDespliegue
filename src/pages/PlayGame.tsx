@@ -6,14 +6,13 @@ export default function PlayGame() {
   return (
     <BackgroundWrapper image={playBg}>
       <div
+        className="center"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
           flexDirection: 'column',
-          color: '#fff',
+          height: '100%',
+          color: 'var(--fontColor)',
           textShadow: '3px 3px #000',
+          fontFamily: 'var(--fontFamily)',
         }}
       >
         <h1
@@ -21,7 +20,6 @@ export default function PlayGame() {
             fontSize: '4rem',
             textTransform: 'uppercase',
             letterSpacing: '4px',
-            fontFamily: "'Pixelify Sans', monospace",
           }}
         >
           Creando

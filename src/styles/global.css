@@ -1,0 +1,217 @@
+:root {
+  --background: #121218;
+  --fontFamily: 'Pixelify Sans', monospace;
+  --fontColor: #ffffff;
+
+  --colorGreen: #00ff28;
+  --colorBlue: #0028ff;
+  --colorBlueNeon: #00fff6;
+  --colorRed: #ff0303;
+
+  --panelColor: #92929200;
+
+
+  --buttonFontSize: 1.3rem;
+  --buttonRadius: 3px;
+  --buttonPadding: 15px 25px;
+
+  --buttonBgDark: #111;
+  --buttonTextColor: #ffffff;
+  --panelBorder: rgba(255,255,255,0.04);
+  --panelGradient: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  --shadowStrong: 0 6px 20px rgba(2,6,23,0.6);
+  --shadowSoft: 0 6px 18px rgba(2,6,23,0.6);
+
+  --accentColor: var(--colorBlueNeon);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  font-family: var(--fontFamily);
+  color: var(--fontColor);
+  background: var(--background);
+
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.appCenter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 32px;
+}
+
+.panel {
+  background: var(--panelColor);
+  border: 1px solid var(--panelBorder);
+  padding: 24px;
+  border-radius: var(--buttonRadius);
+  backdrop-filter: blur(2px);
+  box-shadow: var(--shadowStrong);
+  color: inherit;
+}
+
+/* BOTONES */
+.btn {
+  font-weight: 700;
+  font-size: var(--buttonFontSize);
+  padding: var(--buttonPadding);
+  text-transform: uppercase;
+  color: var(--buttonTextColor);
+  background-color: var(--buttonBgDark);
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-radius: var(--buttonRadius);
+}
+
+.btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #000;
+  filter: brightness(1.2);
+}
+
+.btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 #000;
+  filter: brightness(0.9);
+}
+
+/* Variantes */
+.btnPrimary {
+  background: var(--colorBlueNeon);
+  color: var(--fontColor);
+}
+
+.btnSecondary {
+  background: var(--colorGreen);
+  color: var(--fontColor);
+}
+
+.btnDanger {
+  background: var(--colorRed);
+  color: var(--fontColor);
+}
+
+.btnNeutral {
+  background: var(--panelGradient);
+  border: 1px solid var(--panelBorder);
+  color: #e6eef8;
+}
+
+/* MENU */
+.menuRoot { 
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  gap: 28px; 
+  width: 100%; 
+  max-width: 980px; 
+}
+
+.menuTitle { text-align: center; }
+
+.menuGrid { 
+  display: grid; 
+  grid-template-columns: repeat(2, 260px); 
+  gap: 18px; 
+  justify-content: center; 
+}
+
+/* Multijugador */
+.multiplayerRoot { 
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  gap: 18px; 
+}
+
+.column { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 12px; 
+  align-items: center; 
+}
+
+/* Código de sala */
+.roomCode {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 46px;
+  font-weight: 700;
+  letter-spacing: 8px;
+  padding: 26px 36px;
+  border-radius: 12px;
+  background: var(--panelGradient);
+  border: 1px solid var(--panelBorder);
+  color: var(--accentColor);
+}
+
+/* Inputs */
+.input {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: #ffffffdc;
+  color: #000000;
+  outline: none;
+  min-width: 260px;
+}
+
+.input:focus {
+  box-shadow: var(--shadowSoft);
+  border-color: var(--accentColor);
+}
+
+/* Utilidades */
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.smallMuted {
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.6);
+}
+
+.linkLike {
+  color: var(--accentColor);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.linkLike:hover {
+  filter: brightness(1.2);
+}
+.menuRoot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  width: 100%;
+  max-width: 980px;
+}
+
+.textOutlined {
+  text-shadow:
+    -2px -2px 0 #000,
+     2px -2px 0 #000,
+    -2px  2px 0 #000,
+     2px  2px 0 #000,
+    -2px  0   0 #000,
+     2px  0   0 #000,
+     0   -2px 0 #000,
+     0    2px 0 #000;
+}
