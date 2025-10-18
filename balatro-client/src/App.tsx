@@ -5,6 +5,7 @@ import Multiplayer from './pages/Multiplayer'
 import CreateRoom from './pages/CreateRoom'
 import JoinRoom from './pages/JoinRoom'
 import HowToPlay from './pages/HowToPlay'
+import PlayGame from './pages/PlayGame'
 
 export default function App() {
   return (
@@ -15,9 +16,9 @@ export default function App() {
       <Route path="/join" element={<JoinRoom />} />
       <Route path="/howto" element={<HowToPlay />} />
 
-      {/* Rutas placeholders */}
-      <Route path="/solo" element={<div style={{padding:40}}><h2>Solitario (pendiente)</h2></div>} />
-      <Route path="/config" element={<div style={{padding:40}}><h2>Configuración (pendiente)</h2></div>} />
+      {/* placeholders */}
+      <Route path="/solo" element={<PlayGame />} />
+      <Route path="/config" element={<div style={{ padding: 40 }}><h2>Configuración (pendiente)</h2></div>} />
     </Routes>
   )
 }

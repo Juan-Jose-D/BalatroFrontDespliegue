@@ -1,5 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
+import BackgroundWrapper from '../components/BackgroundWrapper'
+import createBg from '../assets/backgrounds/createRoom-bg.png'
 import Button from '../components/Button'
 
 export default function JoinRoom() {
@@ -8,13 +10,13 @@ export default function JoinRoom() {
 
   const handleSearch = () => {
     if (!code.trim()) return alert('Ingresa un código')
-    // aquí deberías llamar al backend para validar código; por ahora:
     alert(`Buscando sala: ${code.toUpperCase()}`)
+    // Aquí reemplazas por la llamada al backend / WS
   }
 
   return (
-    <div className="app-center">
-      <div className="panel" style={{ width: 480 }}>
+    <BackgroundWrapper image={createBg}>
+      <div className="panel" style={{ width: 480, textAlign: 'center' }}>
         <h2>Unirse a sala</h2>
 
         <div style={{ marginTop: 16 }} className="center">
@@ -23,6 +25,7 @@ export default function JoinRoom() {
             placeholder="Ingresa el código (ej: A1B2C3)"
             value={code}
             onChange={(e) => setCode(e.target.value)}
+            style={{ textTransform: 'uppercase' }}
           />
         </div>
 
@@ -32,6 +35,6 @@ export default function JoinRoom() {
           <Button variant="neutral" onClick={() => nav('/multiplayer')}>Salir</Button>
         </div>
       </div>
-    </div>
+    </BackgroundWrapper>
   )
 }

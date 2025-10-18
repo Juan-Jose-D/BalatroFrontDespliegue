@@ -11,7 +11,17 @@
 
 /* Reset/Body */
 *{box-sizing:border-box}
-html,body,#root{height:100%;margin:0;font-family: Inter, system-ui, Arial, sans-serif;background: linear-gradient(180deg,#071022,#031021);color:#e6eef8}
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: 'Pixelify Sans', monospace;
+  background: linear-gradient(180deg, #050a18, #000000);
+  color: #f8f8f8;
+}
+
+
+
 
 /* Layout wrappers */
 .app-center {
@@ -28,27 +38,37 @@ html,body,#root{height:100%;margin:0;font-family: Inter, system-ui, Arial, sans-
   border: 1px solid rgba(255,255,255,0.04);
   padding: 24px;
   border-radius: 14px;
-  backdrop-filter: blur(6px);
+  /*backdrop-filter: blur(6px);*/
   box-shadow: 0 6px 20px rgba(2,6,23,0.6);
   color: inherit;
 }
 
 /* Buttons base */
 .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--btn-padding);
-  border-radius: var(--btn-radius);
+  font-family: 'Pixelify Sans', monospace;
+  font-weight: 700;
+  font-size: 1.3rem;
+  padding: 14px 24px;
+  text-transform: uppercase;
+  color: #fff;
+  background-color: #111;
   border: none;
-  font-size: var(--btn-font);
   cursor: pointer;
-  color: white;
-  transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.45);
-  min-width: 180px;
+  transition: all 0.15s ease;
 }
-.btn:hover { transform: translateY(-4px) }
+
+.btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 #000;
+  filter: brightness(1.2);
+}
+
+/* Al presionar */
+.btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 #000;
+  filter: brightness(0.9);
+}
 
 /* Variants */
 .btn-primary { background: linear-gradient(180deg,#2dd4bf,#10b981); } /* green */

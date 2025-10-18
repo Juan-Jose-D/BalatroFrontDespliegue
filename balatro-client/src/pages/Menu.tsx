@@ -1,13 +1,15 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
+import BackgroundWrapper from '../components/BackgroundWrapper'
+import menuBg from '../assets/backgrounds/menu-bg.png'
 import Button from '../components/Button'
 
 export default function Menu() {
   const nav = useNavigate()
 
   return (
-    <div className="app-center">
-      <div className="panel menu-root">
+    <BackgroundWrapper image={menuBg}>
+      <div className="panel menu-root" style={{ width: 980, maxWidth: '95%' }}>
         <div className="menu-title">
           <h1>Balatro</h1>
           <p className="small-muted">Cliente — demo</p>
@@ -21,11 +23,11 @@ export default function Menu() {
         </div>
 
         <div style={{ marginTop: 14 }} className="center">
-          <Button variant="danger" onClick={() => { /* si quieres cerrar app: window.close() */ }}>
+          <Button variant="danger" onClick={() => { /* window.close() o lógica */ }}>
             Salir
           </Button>
         </div>
       </div>
-    </div>
+    </BackgroundWrapper>
   )
 }
