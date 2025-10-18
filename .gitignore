@@ -1,40 +1,56 @@
-# =========================
-# Java / Maven (si aún lo usas)
-# =========================
-*.class
-*.jar
-*.war
-*.ear
-*.nar
-*.log
+# =====================================================
+# 🧰 GENERALES
+# =====================================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+ehthumbs.db
 *.tmp
+*.temp
 *.bak
-*.swp
+*.orig
+*.rej
+*.sw?
+*.lock
+*.pid
+*.seed
+*.cache
+*.log
+*.log.*
+*.out
+*.err
+tmp/
+temp/
+local/
+logs/
+.cache-loader/
+.history/
+*.code-workspace
 
-target/
-bin/
-out/
-.settings/
-*.iml
+# =====================================================
+# 🧠 EDITORES / IDEs
+# =====================================================
+.vscode/
+!.vscode/extensions.json
 .idea/
-*.classpath
+*.iml
+*.ipr
+*.iws
+*.sublime-project
+*.sublime-workspace
+.settings/
+.classpath
 
-# Maven
-dependency-reduced-pom.xml
-buildNumber.properties
-.mvn/timing.properties
-.mvn/wrapper/maven-wrapper.jar
-
-# =========================
-# Node / JavaScript / TypeScript
-# =========================
+# =====================================================
+# 🧪 NODE / JAVASCRIPT / TYPESCRIPT
+# =====================================================
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-
-# Bloqueo de dependencias (para mantener limpio si no los compartes)
+lerna-debug.log*
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
@@ -46,7 +62,7 @@ pnpm-lock.yaml
 .env.test.local
 .env.production.local
 
-# Coverage / test output
+# Cobertura / pruebas
 coverage/
 .nyc_output/
 cypress/videos/
@@ -54,66 +70,66 @@ cypress/screenshots/
 playwright-report/
 test-results/
 
-# =========================
-# React / Vite / Next.js / Webpack
-# =========================
+# =====================================================
+# ⚛️ REACT / VITE / NEXT / WEBPACK
+# =====================================================
 dist/
+dist-ssr/
 build/
 .next/
 out/
-.cache/
 .vite/
+.cache/
+.vite-deps/
 vite.config.ts.timestamp*
 .eslintcache
 *.tsbuildinfo
 *.map
-
-# Static files generated
 *.bundle.js
 *.bundle.js.map
 *.chunk.js
 *.chunk.js.map
 *.gz
 *.br
+*.local
 
-# =========================
-# HTML / CSS / Frontend assets
-# =========================
+# CSS / preprocesadores
 *.css.map
 *.sass-cache/
 *.scssc
 *.less-cache/
-*.tmp
-*.cache/
 *.parcel-cache/
 *.tsbuildinfo
 
-# =========================
-# Visual Studio Code / IDEs
-# =========================
-.vscode/
-.idea/
-*.iml
-*.ipr
-*.iws
-*.sw?
-*.sublime-project
-*.sublime-workspace
-.history/
-*.code-workspace
+# =====================================================
+# ☕ JAVA / MAVEN
+# =====================================================
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.tmp
+*.bak
+*.swp
+target/
+bin/
+out/
 
-# =========================
-# Sistema operativo
-# =========================
-.DS_Store
-Thumbs.db
-Desktop.ini
-$RECYCLE.BIN/
-ehthumbs.db
+# Maven metadata
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
 
-# =========================
-# Docker
-# =========================
+# Spring properties
+src/main/resources/application-local.properties
+src/main/resources/application.properties
+
+# =====================================================
+# 🐳 DOCKER
+# =====================================================
 *.env
 docker-compose.override.yml
 docker-compose.*.yml
@@ -125,33 +141,9 @@ docker-image-*
 *.img
 *.container
 
-# =========================
-# Logs y caches adicionales
-# =========================
-*.log
-*.log.*
-*.out
-*.err
-*.pid
-*.seed
-*.bak
-*.orig
-*.rej
-*.tmp
-*.temp
-*.cache
-*.lock
-*.swp
-
-# =========================
-# Spring / Application properties (si aplica)
-# =========================
-src/main/resources/application-local.properties
-src/main/resources/application.properties
-
-# =========================
-# Archivos empaquetados / comprimidos
-# =========================
+# =====================================================
+# 🧱 ARCHIVOS EMPAQUETADOS / COMPRIMIDOS
+# =====================================================
 *.tar
 *.tar.gz
 *.tgz
@@ -161,25 +153,19 @@ src/main/resources/application.properties
 *.gz
 *.bz2
 
-# =========================
-# Otras herramientas y frameworks
-# =========================
+# =====================================================
+# 🧩 OTRAS HERRAMIENTAS
+# =====================================================
 storybook-static/
 .storybook-out/
 .husky/
 lint-staged.config.js
-.eslintcache
 .prettiercache
 firebase-debug.log
 firebase-debug.*
 functions/lib/
 functions/node_modules/
 
-# =========================
-# Temporal / Misceláneo
-# =========================
-tmp/
-temp/
-logs/
-local/
-.cache-loader/
+# =====================================================
+# ✅ FIN
+# =====================================================
