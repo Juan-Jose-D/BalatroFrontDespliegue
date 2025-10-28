@@ -1,12 +1,12 @@
-import React from 'react'
 import '../styles/global.css'
 
 type ButtonProps = {
-  children: React.ReactNode
-  variant?: 'primary' | 'secondary' | 'danger' | 'neutral'
-  onClick?: () => void
-  className?: string
-  style?: React.CSSProperties
+  readonly children: React.ReactNode
+  readonly variant?: 'primary' | 'secondary' | 'danger' | 'neutral'
+  readonly onClick?: () => void
+  readonly className?: string
+  readonly style?: React.CSSProperties
+  readonly disabled?: boolean
 }
 
 export default function Button({
@@ -14,13 +14,15 @@ export default function Button({
   variant = 'primary',
   onClick,
   className = '',
-  style
+  style,
+  disabled = false
 }: ButtonProps) {
   return (
     <button
       className={`btn btn-${variant} ${className}`}
       onClick={onClick}
       style={style}
+      disabled={disabled}
     >
       {children}
     </button>

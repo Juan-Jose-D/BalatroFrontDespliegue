@@ -81,6 +81,18 @@ html, body, #root {
   filter: brightness(0.9);
 }
 
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
+.btn:disabled:hover {
+  transform: none;
+  box-shadow: none;
+  filter: grayscale(0.5);
+}
+
 /* Variantes */
 .btnPrimary {
   background: var(--colorBlueNeon);
