@@ -4,6 +4,9 @@ import { createContext, useContext, useState, useCallback, useMemo, type ReactNo
 import type { GameState, GameConfig, HandHistory } from '../types/game'
 import type { Card } from '../types/card'
 import type { HandScore } from '../types/poker'
+import type { JokerInstance } from '../types/joker'
+import type { ShopItem } from '../types/shop'
+import { calculateInterest } from '../utils/shopLogic'
 import {
   createInitialGameState,
   playHand as playHandLogic,
@@ -31,6 +34,17 @@ interface GameContextValue {
   selectCard: (cardId: string) => void
   playSelectedHand: () => void
   discardSelectedCards: () => void
+  
+  // Acciones de Jokers
+  addJoker: (joker: JokerInstance) => boolean
+  removeJoker: (instanceId: string) => void
+  
+  // Acciones de tienda
+  buyShopItem: (item: ShopItem) => boolean
+  rerollShop: (cost: number) => boolean
+  sellJoker: (instanceId: string) => void
+  applyEnhancementToCard: (cardId: string, enhancement: Card['enhancement']) => boolean
+  applyEditionToCard: (cardId: string, edition: Card['edition']) => boolean
   
   // Acciones de juego
   advanceRound: () => void
@@ -77,7 +91,7 @@ export function GameProvider({ children, config }: GameProviderProps) {
 
   // Calcular puntuación de mano actual
   const currentHandScore = selectedCards.length > 0 && selectedCards.length <= 5
-    ? calculateHandScore(selectedCards)
+    ? calculateHandScore(selectedCards, gameState.jokers, gameState.hand.filter(c => !c.selected))
     : null
 
   // Jugar mano seleccionada
@@ -86,7 +100,8 @@ export function GameProvider({ children, config }: GameProviderProps) {
       return
     }
 
-    const handScore = calculateHandScore(selectedCards)
+    const heldCards = gameState.hand.filter(c => !c.selected)
+    const handScore = calculateHandScore(selectedCards, gameState.jokers, heldCards)
     
     setGameState(prev => {
       // Actualizar estado con la puntuación
@@ -137,13 +152,136 @@ export function GameProvider({ children, config }: GameProviderProps) {
 
   // Avanzar a la siguiente ronda
   const advanceRound = useCallback(() => {
-    setGameState(prev => advanceToNextBlind(prev))
+    setGameState(prev => {
+      const newState = advanceToNextBlind(prev)
+      // Añadir interés al dinero
+      const interest = calculateInterest(prev.money)
+      return {
+        ...newState,
+        money: newState.money + interest
+      }
+    })
   }, [])
 
   // Reiniciar juego
   const restartGame = useCallback(() => {
     setGameState(resetGameLogic(config))
   }, [config])
+
+  // Añadir un Joker
+  const addJoker = useCallback((joker: JokerInstance): boolean => {
+    if (gameState.jokers.length >= gameState.maxJokers) {
+      return false // No hay espacio
+    }
+    
+    setGameState(prev => ({
+      ...prev,
+      jokers: [...prev.jokers, joker]
+    }))
+    
+    return true
+  }, [gameState.jokers.length, gameState.maxJokers])
+
+  // Remover un Joker
+  const removeJoker = useCallback((instanceId: string) => {
+    setGameState(prev => ({
+      ...prev,
+      jokers: prev.jokers.filter(j => j.instanceId !== instanceId)
+    }))
+  }, [])
+
+  // Comprar item de la tienda
+  const buyShopItem = useCallback((item: ShopItem): boolean => {
+    if (gameState.money < item.cost) {
+      return false // No hay suficiente dinero
+    }
+    
+    if (item.type === 'joker' && item.joker) {
+      const success = addJoker({ ...item.joker, instanceId: item.id })
+      if (success) {
+        setGameState(prev => ({
+          ...prev,
+          money: prev.money - item.cost
+        }))
+        return true
+      }
+      return false
+    }
+    
+    if (item.type === 'card_enhancement' && item.enhancement) {
+      // Guardar la mejora comprada para que el jugador la aplique manualmente
+      setGameState(prev => ({
+        ...prev,
+        money: prev.money - item.cost,
+        // Aquí se podría guardar las mejoras compradas pendientes de aplicar
+      }))
+      return true
+    }
+    
+    return false
+  }, [gameState.money, addJoker])
+
+  // Aplicar mejora a una carta específica
+  const applyEnhancementToCard = useCallback((cardId: string, enhancement: Card['enhancement']): boolean => {
+    const card = gameState.hand.find(c => c.id === cardId)
+    if (!card) return false
+    
+    setGameState(prev => ({
+      ...prev,
+      hand: prev.hand.map(c => 
+        c.id === cardId 
+          ? { ...c, enhancement }
+          : c
+      )
+    }))
+    
+    return true
+  }, [gameState.hand])
+
+  // Aplicar edición a una carta específica
+  const applyEditionToCard = useCallback((cardId: string, edition: Card['edition']): boolean => {
+    const card = gameState.hand.find(c => c.id === cardId)
+    if (!card) return false
+    
+    setGameState(prev => ({
+      ...prev,
+      hand: prev.hand.map(c => 
+        c.id === cardId 
+          ? { ...c, edition }
+          : c
+      )
+    }))
+    
+    return true
+  }, [gameState.hand])
+
+  // Vender Joker
+  const sellJoker = useCallback((instanceId: string) => {
+    const joker = gameState.jokers.find(j => j.instanceId === instanceId)
+    if (!joker) return
+    
+    const sellPrice = Math.floor(joker.cost / 2)
+    removeJoker(instanceId)
+    
+    setGameState(prev => ({
+      ...prev,
+      money: prev.money + sellPrice
+    }))
+  }, [gameState.jokers, removeJoker])
+
+  // Reroll tienda
+  const rerollShop = useCallback((cost: number): boolean => {
+    if (gameState.money < cost) {
+      return false
+    }
+    
+    setGameState(prev => ({
+      ...prev,
+      money: prev.money - cost
+    }))
+    
+    return true
+  }, [gameState.money])
 
   // Información del blind actual
   const blindInfo = getBlindInfo(gameState)
@@ -157,6 +295,13 @@ export function GameProvider({ children, config }: GameProviderProps) {
     selectCard,
     playSelectedHand,
     discardSelectedCards,
+    addJoker,
+    removeJoker,
+    buyShopItem,
+    rerollShop,
+    sellJoker,
+    applyEnhancementToCard,
+    applyEditionToCard,
     advanceRound,
     restartGame,
     selectedCards,
@@ -169,6 +314,13 @@ export function GameProvider({ children, config }: GameProviderProps) {
     selectCard,
     playSelectedHand,
     discardSelectedCards,
+    addJoker,
+    removeJoker,
+    buyShopItem,
+    rerollShop,
+    sellJoker,
+    applyEnhancementToCard,
+    applyEditionToCard,
     advanceRound,
     restartGame,
     selectedCards,

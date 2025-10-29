@@ -12,6 +12,7 @@ export interface Card {
   bonus?: number      // Puntos bonus
   multiplier?: number // Multiplicador
   enhancement?: 'bonus' | 'mult' | 'wild' | 'glass' | 'steel' | 'stone' | 'gold' | 'lucky'
+  edition?: 'foil' | 'holographic' | 'polychrome' // Edición visual
 }
 
 export interface Deck {

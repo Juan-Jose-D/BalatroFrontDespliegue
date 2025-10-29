@@ -2,6 +2,7 @@
 
 import type { Card } from './card'
 import type { PokerHandType } from './poker'
+import type { JokerInstance } from './joker'
 
 /**
  * Configuración de un Blind (objetivo de ronda)
@@ -55,6 +56,10 @@ export interface GameState {
   money: number                  // Dinero acumulado
   totalScore: number            // Puntuación total del juego
   
+  // Jokers
+  jokers: JokerInstance[]       // Jokers activos (máx 5)
+  maxJokers: number             // Máximo de Jokers (default: 5)
+  
   // Estado de la ronda actual
   hand: Card[]                   // Cartas en mano
   deck: Card[]                   // Mazo restante
@@ -91,6 +96,7 @@ export const GAME_CONSTANTS = {
   MAX_DISCARDS: 3,
   HAND_SIZE: 8,
   STARTING_ANTE: 1,
+  MAX_JOKERS: 5,
   
   // Incremento de dificultad por ante
   ANTE_MULTIPLIER: 1.5,

@@ -32,14 +32,21 @@ export default function Card({ card, onClick, faceDown = false, disabled = false
     )
   }
 
+  const editionClass = card.edition ? `card-edition-${card.edition}` : ''
+  
   return (
     <button
       type="button"
-      className={`card card-face ${card.selected ? 'card-selected' : ''} ${disabled ? 'card-disabled' : ''}`}
+      className={`card card-face ${card.selected ? 'card-selected' : ''} ${disabled ? 'card-disabled' : ''} ${editionClass}`}
       onClick={handleClick}
       disabled={disabled}
       data-color={color}
     >
+      {/* Efecto de edición */}
+      {card.edition && (
+        <div className={`card-edition-effect card-edition-effect-${card.edition}`}></div>
+      )}
+
       {/* Valor superior izquierda */}
       <div className="card-corner card-corner-top">
         <div className="card-rank">{card.rank}</div>

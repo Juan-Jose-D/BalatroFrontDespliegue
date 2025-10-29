@@ -1,7 +1,9 @@
 import type { Card } from '../types/card'
 import type { PokerHandType, HandScore } from '../types/poker'
+import type { JokerInstance } from '../types/joker'
 import { RANK_VALUES } from '../types/card'
 import { POKER_HANDS } from '../types/poker'
+import { applyJokerEffects } from './jokerEffects'
 
 /**
  * Detecta el tipo de mano de poker de un conjunto de cartas
@@ -124,8 +126,14 @@ function countRanks(cards: Card[]): Record<string, number> {
 /**
  * Calcula la puntuación de una mano
  * @param cards - Cartas seleccionadas (máx 5)
+ * @param jokers - Jokers activos (opcional)
+ * @param heldCards - Cartas no jugadas (opcional, para efectos de Jokers)
  */
-export function calculateHandScore(cards: Card[]): HandScore {
+export function calculateHandScore(
+  cards: Card[],
+  jokers?: JokerInstance[],
+  heldCards?: Card[]
+): HandScore {
   const handType = detectPokerHand(cards)
   const baseHand = POKER_HANDS[handType]
 
@@ -145,6 +153,20 @@ export function calculateHandScore(cards: Card[]): HandScore {
     if (card.multiplier) {
       multiplier += card.multiplier
     }
+  }
+
+  // Aplicar efectos de Jokers si están presentes
+  if (jokers && jokers.length > 0) {
+    const jokerEffects = applyJokerEffects(jokers, {
+      handType,
+      playedCards: cards,
+      heldCards: heldCards || [],
+      baseChips: chips,
+      baseMult: multiplier
+    })
+    
+    chips += jokerEffects.addedChips
+    multiplier += jokerEffects.addedMult
   }
 
   const score = chips * multiplier

@@ -1,11 +1,20 @@
+import { useState } from 'react'
 import BackgroundWrapper from '../components/BackgroundWrapper'
 import Card from '../components/game/Card'
+import JokerCard from '../components/game/JokerCard'
+import Shop from '../components/Shop'
 import Button from '../components/Button'
 import playBg from '../assets/backgrounds/play-bg.png'
 import { useGame } from '../context/GameContext'
 import { POKER_HANDS } from '../types/poker'
+import { getRandomJoker } from '../data/jokers'
+import { createJokerInstance } from '../utils/jokerEffects'
+import { calculateInterest } from '../utils/shopLogic'
+import type { ShopItem } from '../types/shop'
 
 export default function PlayGame() {
+  const [showShop, setShowShop] = useState(false)
+  
   const {
     gameState,
     selectCard,
@@ -13,6 +22,12 @@ export default function PlayGame() {
     discardSelectedCards,
     restartGame,
     advanceRound,
+    addJoker,
+    buyShopItem,
+    rerollShop,
+    sellJoker,
+    applyEnhancementToCard,
+    applyEditionToCard,
     currentHandScore,
     blindInfo,
     canPlay,
@@ -28,8 +43,72 @@ export default function PlayGame() {
     }
   }
 
-  // Pantalla de victoria
+  // Función para añadir Joker de prueba
+  const handleAddTestJoker = () => {
+    const randomJoker = getRandomJoker()
+    const jokerInstance = createJokerInstance(randomJoker as any)
+    const added = addJoker(jokerInstance)
+    if (!added) {
+      alert('No hay espacio para más Jokers (máximo 5)')
+    }
+  }
+
+  // Función para probar ediciones en cartas
+  const handleTestEdition = () => {
+    if (gameState.hand.length === 0) return
+    
+    const editions: Array<'foil' | 'holographic' | 'polychrome'> = ['foil', 'holographic', 'polychrome']
+    const randomEdition = editions[Math.floor(Math.random() * editions.length)]
+    const randomCard = gameState.hand[Math.floor(Math.random() * gameState.hand.length)]
+    
+    applyEditionToCard(randomCard.id, randomEdition)
+    alert(`Edición ${randomEdition} aplicada a ${randomCard.rank}${randomCard.suit}`)
+  }
+
+  // Función para probar mejoras en cartas
+  const handleTestEnhancement = () => {
+    if (gameState.hand.length === 0) return
+    
+    const enhancements: Array<'bonus' | 'mult' | 'wild' | 'glass' | 'steel' | 'stone' | 'gold' | 'lucky'> = 
+      ['bonus', 'mult', 'wild', 'glass', 'steel', 'stone', 'gold', 'lucky']
+    const randomEnhancement = enhancements[Math.floor(Math.random() * enhancements.length)]
+    const randomCard = gameState.hand[Math.floor(Math.random() * gameState.hand.length)]
+    
+    applyEnhancementToCard(randomCard.id, randomEnhancement)
+    alert(`Mejora ${randomEnhancement} aplicada a ${randomCard.rank}${randomCard.suit}`)
+  }
+
+  // Pantalla de victoria - Muestra tienda
   if (gameState.gameStatus === 'won') {
+    const interest = calculateInterest(gameState.money)
+    
+    if (showShop) {
+      const handleBuyItem = (item: ShopItem): boolean => {
+        return buyShopItem(item)
+      }
+
+      const handleReroll = (cost: number): boolean => {
+        return rerollShop(cost)
+      }
+
+      const handleSkipShop = () => {
+        setShowShop(false)
+        advanceRound()
+      }
+
+      return (
+        <BackgroundWrapper image={playBg}>
+          <Shop
+            ante={gameState.ante}
+            money={gameState.money}
+            onBuyItem={handleBuyItem}
+            onReroll={handleReroll}
+            onSkip={handleSkipShop}
+          />
+        </BackgroundWrapper>
+      )
+    }
+    
     return (
       <BackgroundWrapper image={playBg}>
         <div className="panel" style={{ 
@@ -50,11 +129,12 @@ export default function PlayGame() {
           <div style={{ fontSize: '1.2rem', marginBottom: '30px' }}>
             <div>Puntuación: {gameState.currentRound.score} / {blindInfo.scoreNeeded}</div>
             <div>Recompensa: +${blindInfo.reward}</div>
-            <div>Dinero Total: ${gameState.money}</div>
+            <div>Interés: +${interest}</div>
+            <div>Dinero Total: ${gameState.money + interest}</div>
           </div>
           <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
-            <Button variant="primary" onClick={advanceRound}>
-              Siguiente Ronda
+            <Button variant="primary" onClick={() => setShowShop(true)}>
+              Ir a la Tienda
             </Button>
             <Button variant="neutral" onClick={restartGame}>
               Reiniciar Juego
@@ -204,6 +284,66 @@ export default function PlayGame() {
           )}
         </div>
 
+        {/* Panel de Jokers */}
+        {gameState.jokers.length > 0 && (
+          <div style={{ width: '100%', maxWidth: '900px' }}>
+            <div style={{ 
+              textAlign: 'center',
+              marginBottom: '10px',
+              fontSize: '1.2rem',
+              fontWeight: 700,
+              color: 'var(--colorBlueNeon)'
+            }}>
+              Jokers Activos ({gameState.jokers.length}/{gameState.maxJokers})
+            </div>
+            <div style={{
+              display: 'flex',
+              gap: '15px',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              padding: '15px',
+              background: 'rgba(0,0,0,0.3)',
+              borderRadius: '12px'
+            }}>
+              {gameState.jokers.map(joker => (
+                <div key={joker.instanceId} style={{ position: 'relative' }}>
+                  <JokerCard
+                    joker={joker}
+                    size="medium"
+                  />
+                  <button
+                    onClick={() => {
+                      const sellPrice = Math.floor(joker.cost / 2)
+                      if (globalThis.confirm(`¿Vender ${joker.name} por $${sellPrice}?`)) {
+                        sellJoker(joker.instanceId)
+                      }
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '5px',
+                      right: '5px',
+                      background: 'rgba(255, 0, 0, 0.8)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '30px',
+                      height: '30px',
+                      cursor: 'pointer',
+                      fontSize: '1.2rem',
+                      fontWeight: 'bold',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Cartas en mano */}
         <div style={{
           display: 'flex',
@@ -240,6 +380,27 @@ export default function PlayGame() {
             disabled={!canDiscard}
           >
             Descartar ({gameState.currentRound.discardsRemaining})
+          </Button>
+          
+          <Button
+            variant="secondary"
+            onClick={handleAddTestJoker}
+          >
+            + Joker (Test)
+          </Button>
+          
+          <Button
+            variant="secondary"
+            onClick={handleTestEdition}
+          >
+            + Edición (Test)
+          </Button>
+          
+          <Button
+            variant="secondary"
+            onClick={handleTestEnhancement}
+          >
+            + Mejora (Test)
           </Button>
           
           <Button

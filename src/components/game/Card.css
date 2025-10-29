@@ -201,6 +201,105 @@
   color: #8bc34a;
 }
 
+/* Efectos de Edición */
+.card-edition-effect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Foil - Efecto metálico con brillo */
+.card-edition-foil {
+  position: relative;
+  border: 2px solid rgba(192, 192, 192, 0.8);
+  box-shadow: 0 4px 8px rgba(192, 192, 192, 0.4);
+}
+
+.card-edition-effect-foil {
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 70%
+  );
+  animation: foil-shine 3s linear infinite;
+}
+
+@keyframes foil-shine {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Holographic - Efecto arcoíris */
+.card-edition-holographic {
+  position: relative;
+  border: 2px solid rgba(138, 43, 226, 0.8);
+  box-shadow: 0 4px 8px rgba(138, 43, 226, 0.4), 0 0 20px rgba(138, 43, 226, 0.3);
+}
+
+.card-edition-effect-holographic {
+  background: linear-gradient(
+    45deg,
+    rgba(255, 0, 0, 0.2),
+    rgba(255, 154, 0, 0.2),
+    rgba(208, 222, 33, 0.2),
+    rgba(79, 220, 74, 0.2),
+    rgba(63, 218, 216, 0.2),
+    rgba(47, 201, 226, 0.2),
+    rgba(28, 127, 238, 0.2),
+    rgba(95, 21, 242, 0.2),
+    rgba(186, 12, 248, 0.2),
+    rgba(251, 7, 217, 0.2)
+  );
+  background-size: 300% 300%;
+  animation: holographic-shift 4s ease infinite;
+}
+
+@keyframes holographic-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Polychrome - Efecto multicolor brillante */
+.card-edition-polychrome {
+  position: relative;
+  border: 2px solid rgba(255, 215, 0, 0.8);
+  box-shadow: 0 4px 8px rgba(255, 215, 0, 0.4), 0 0 20px rgba(255, 0, 255, 0.3);
+}
+
+.card-edition-effect-polychrome {
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(255, 0, 255, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 50%, rgba(0, 255, 255, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 50% 20%, rgba(255, 255, 0, 0.3) 0%, transparent 50%);
+  animation: polychrome-pulse 2s ease-in-out infinite;
+}
+
+@keyframes polychrome-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .card {

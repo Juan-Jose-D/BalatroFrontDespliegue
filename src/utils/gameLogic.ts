@@ -34,6 +34,8 @@ export function createInitialGameState(config?: Partial<GameConfig>): GameState 
     },
     money: finalConfig.startingMoney,
     totalScore: 0,
+    jokers: [],                   // Sin Jokers al inicio
+    maxJokers: GAME_CONSTANTS.MAX_JOKERS,
     hand: dealt,
     deck: remaining,
     maxHands: finalConfig.maxHands,
@@ -112,6 +114,7 @@ export function advanceToNextBlind(state: GameState): GameState {
     ante: next.ante,
     blind: next.blind,
     money: state.money + reward,
+    jokers: state.jokers,  // Los Jokers persisten entre rondas
     currentRound: {
       ante: next.ante,
       blind: next.blind,
