@@ -1,5 +1,5 @@
-import React from 'react'
 import { Routes, Route } from 'react-router-dom'
+import { GameProvider } from './context/GameContext'
 import Menu from './pages/Menu'
 import Multiplayer from './pages/Multiplayer'
 import CreateRoom from './pages/CreateRoom'
@@ -16,8 +16,15 @@ export default function App() {
       <Route path="/join" element={<JoinRoom />} />
       <Route path="/howto" element={<HowToPlay />} />
 
-      {/* placeholders */}
-      <Route path="/solo" element={<PlayGame />} />
+      {/* Modo Solitario con GameProvider */}
+      <Route 
+        path="/solo" 
+        element={
+          <GameProvider>
+            <PlayGame />
+          </GameProvider>
+        } 
+      />
       <Route path="/config" element={<div style={{ padding: 40 }}><h2>Configuración (pendiente)</h2></div>} />
     </Routes>
   )

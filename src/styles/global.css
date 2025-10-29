@@ -207,14 +207,6 @@ html, body, #root {
 .linkLike:hover {
   filter: brightness(1.2);
 }
-.menuRoot {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 28px;
-  width: 100%;
-  max-width: 980px;
-}
 
 .textOutlined {
   text-shadow:
