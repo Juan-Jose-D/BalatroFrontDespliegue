@@ -7,6 +7,7 @@ import type { HandScore } from '../types/poker'
 import type { JokerInstance } from '../types/joker'
 import type { ShopItem } from '../types/shop'
 import { calculateInterest } from '../utils/shopLogic'
+import { calculateAllCardEffects } from '../utils/cardEnhancements'
 import {
   createInitialGameState,
   playHand as playHandLogic,
@@ -103,9 +104,17 @@ export function GameProvider({ children, config }: GameProviderProps) {
     const heldCards = gameState.hand.filter(c => !c.selected)
     const handScore = calculateHandScore(selectedCards, gameState.jokers, heldCards)
     
+    // Calcular efectos de mejoras (dinero de gold, cartas rotas de glass)
+    const cardEffects = calculateAllCardEffects(selectedCards)
+    
     setGameState(prev => {
       // Actualizar estado con la puntuación
       let newState = playHandLogic(prev, handScore.score)
+      
+      // Añadir dinero de cartas gold
+      if (cardEffects.totalMoney > 0) {
+        newState.money += cardEffects.totalMoney
+      }
       
       // Añadir al historial
       const historyEntry: HandHistory = {
@@ -118,9 +127,12 @@ export function GameProvider({ children, config }: GameProviderProps) {
       }
       newState.history = [...newState.history, historyEntry]
       
-      // Repartir nuevas cartas para reemplazar las jugadas
+      // Remover cartas jugadas (incluyendo las rotas)
       const nonSelectedCards = removeCards(prev.hand, selectedCards)
-      const { dealt, remaining } = dealCards(newState.deck, selectedCards.length)
+      
+      // Determinar cuántas cartas repartir (menos si algunas se rompieron)
+      const cardsToReplace = selectedCards.length - cardEffects.brokenCards.length
+      const { dealt, remaining } = dealCards(newState.deck, cardsToReplace)
       
       newState.hand = [...nonSelectedCards, ...dealt]
       newState.deck = remaining

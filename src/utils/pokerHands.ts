@@ -4,6 +4,7 @@ import type { JokerInstance } from '../types/joker'
 import { RANK_VALUES } from '../types/card'
 import { POKER_HANDS } from '../types/poker'
 import { applyJokerEffects } from './jokerEffects'
+import { calculateAllCardEffects } from './cardEnhancements'
 
 /**
  * Detecta el tipo de mano de poker de un conjunto de cartas
@@ -137,16 +138,19 @@ export function calculateHandScore(
   const handType = detectPokerHand(cards)
   const baseHand = POKER_HANDS[handType]
 
-  // Por ahora usamos valores base, más adelante añadiremos modificadores
   let chips = baseHand.chips
   let multiplier = baseHand.multiplier
 
   // Añadir puntos de las cartas individuales
   for (const card of cards) {
     const cardValue = RANK_VALUES[card.rank]
-    chips += cardValue
     
-    // Aplicar bonus si la carta tiene mejoras
+    // Stone cards no añaden su valor base
+    if (card.enhancement !== 'stone') {
+      chips += cardValue
+    }
+    
+    // Aplicar bonus y multiplicadores básicos si existen
     if (card.bonus) {
       chips += card.bonus
     }
@@ -154,6 +158,11 @@ export function calculateHandScore(
       multiplier += card.multiplier
     }
   }
+
+  // Aplicar efectos de mejoras y ediciones de cartas
+  const cardEffects = calculateAllCardEffects(cards)
+  chips += cardEffects.totalAddedChips
+  multiplier += cardEffects.totalAddedMult
 
   // Aplicar efectos de Jokers si están presentes
   if (jokers && jokers.length > 0) {

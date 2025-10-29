@@ -1,19 +1,23 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import BackgroundWrapper from '../components/BackgroundWrapper'
 import Card from '../components/game/Card'
 import JokerCard from '../components/game/JokerCard'
 import Shop from '../components/Shop'
 import Button from '../components/Button'
+import FloatingNotification from '../components/FloatingNotification'
 import playBg from '../assets/backgrounds/play-bg.png'
 import { useGame } from '../context/GameContext'
+import { useNotifications } from '../hooks/useNotifications'
 import { POKER_HANDS } from '../types/poker'
 import { getRandomJoker } from '../data/jokers'
 import { createJokerInstance } from '../utils/jokerEffects'
 import { calculateInterest } from '../utils/shopLogic'
+import { calculateAllCardEffects } from '../utils/cardEnhancements'
 import type { ShopItem } from '../types/shop'
 
 export default function PlayGame() {
   const [showShop, setShowShop] = useState(false)
+  const { notifications, addNotification, removeNotification } = useNotifications()
   
   const {
     gameState,
@@ -31,8 +35,27 @@ export default function PlayGame() {
     currentHandScore,
     blindInfo,
     canPlay,
-    canDiscard
+    canDiscard,
+    selectedCards
   } = useGame()
+
+  // Detectar efectos de cartas al jugar
+  useEffect(() => {
+    if (selectedCards.length > 0) {
+      const effects = calculateAllCardEffects(selectedCards)
+      
+      // Mostrar notificación de dinero ganado (Gold cards)
+      if (effects.totalMoney > 0) {
+        addNotification(`+$${effects.totalMoney} de cartas Gold!`, 'gold', 2500)
+      }
+      
+      // Mostrar notificación de cartas rotas (Glass cards)
+      if (effects.brokenCards.length > 0) {
+        const cardNames = effects.brokenCards.map(c => c.rank).join(', ')
+        addNotification(`💥 ${cardNames} se rompió!`, 'glass', 2500)
+      }
+    }
+  }, [gameState.currentRound.score]) // Se ejecuta cuando cambia el score (después de jugar)
 
   const getBlindColor = () => {
     switch (gameState.blind) {
@@ -425,6 +448,15 @@ export default function PlayGame() {
           </p>
         </div>
       </div>
+
+      {/* Notificaciones flotantes */}
+      {notifications.map(notification => (
+        <FloatingNotification
+          key={notification.id}
+          notification={notification}
+          onRemove={removeNotification}
+        />
+      ))}
     </BackgroundWrapper>
   )
 }
