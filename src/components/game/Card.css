@@ -1,0 +1,321 @@
+/* Carta base */
+.card {
+  position: relative;
+  width: 90px;
+  height: 130px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  padding: 0;
+  font-family: var(--fontFamily);
+  background: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.card:hover:not(.card-disabled) {
+  transform: translateY(-10px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+.card:active:not(.card-disabled) {
+  transform: translateY(-5px);
+}
+
+.card-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Carta boca arriba */
+.card-face {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 8px;
+  overflow: hidden;
+}
+
+/* Carta seleccionada */
+.card-selected {
+  transform: translateY(-15px);
+  box-shadow: 0 0 20px rgba(0, 255, 246, 0.8), 0 8px 16px rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--colorBlueNeon);
+}
+
+.card-selected-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 3px solid var(--colorBlueNeon);
+  border-radius: 8px;
+  pointer-events: none;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Esquinas de la carta */
+.card-corner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-weight: 700;
+  line-height: 1;
+  z-index: 1;
+}
+
+.card-corner-top {
+  align-self: flex-start;
+}
+
+.card-corner-bottom {
+  align-self: flex-end;
+  transform: rotate(180deg);
+}
+
+.card-rank {
+  font-size: 20px;
+  margin-bottom: 2px;
+}
+
+.card-suit {
+  font-size: 18px;
+}
+
+/* Símbolo central grande */
+.card-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 48px;
+  opacity: 0.15;
+  z-index: 0;
+}
+
+.card-suit-large {
+  display: block;
+}
+
+/* Colores según el palo */
+.card-face[data-color="red"] .card-rank,
+.card-face[data-color="red"] .card-suit,
+.card-face[data-color="red"] .card-suit-large {
+  color: #d32f2f;
+}
+
+.card-face[data-color="black"] .card-rank,
+.card-face[data-color="black"] .card-suit,
+.card-face[data-color="black"] .card-suit-large {
+  color: #212121;
+}
+
+/* Carta boca abajo */
+.card-back {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.card-pattern {
+  width: 100%;
+  height: 100%;
+  background-image: 
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgba(255, 255, 255, 0.1) 10px,
+      rgba(255, 255, 255, 0.1) 20px
+    );
+}
+
+/* Mejoras/Enhancements */
+.card-enhancement {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: 2px solid;
+}
+
+.card-enhancement[data-enhancement="bonus"] {
+  border-color: #4caf50;
+  color: #4caf50;
+}
+
+.card-enhancement[data-enhancement="mult"] {
+  border-color: #f44336;
+  color: #f44336;
+}
+
+.card-enhancement[data-enhancement="wild"] {
+  border-color: #9c27b0;
+  color: #9c27b0;
+}
+
+.card-enhancement[data-enhancement="glass"] {
+  border-color: #00bcd4;
+  color: #00bcd4;
+}
+
+.card-enhancement[data-enhancement="steel"] {
+  border-color: #607d8b;
+  color: #607d8b;
+}
+
+.card-enhancement[data-enhancement="stone"] {
+  border-color: #795548;
+  color: #795548;
+}
+
+.card-enhancement[data-enhancement="gold"] {
+  border-color: #ffd700;
+  color: #ffd700;
+}
+
+.card-enhancement[data-enhancement="lucky"] {
+  border-color: #8bc34a;
+  color: #8bc34a;
+}
+
+/* Efectos de Edición */
+.card-edition-effect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Foil - Efecto metálico con brillo */
+.card-edition-foil {
+  position: relative;
+  border: 2px solid rgba(192, 192, 192, 0.8);
+  box-shadow: 0 4px 8px rgba(192, 192, 192, 0.4);
+}
+
+.card-edition-effect-foil {
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 70%
+  );
+  animation: foil-shine 3s linear infinite;
+}
+
+@keyframes foil-shine {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Holographic - Efecto arcoíris */
+.card-edition-holographic {
+  position: relative;
+  border: 2px solid rgba(138, 43, 226, 0.8);
+  box-shadow: 0 4px 8px rgba(138, 43, 226, 0.4), 0 0 20px rgba(138, 43, 226, 0.3);
+}
+
+.card-edition-effect-holographic {
+  background: linear-gradient(
+    45deg,
+    rgba(255, 0, 0, 0.2),
+    rgba(255, 154, 0, 0.2),
+    rgba(208, 222, 33, 0.2),
+    rgba(79, 220, 74, 0.2),
+    rgba(63, 218, 216, 0.2),
+    rgba(47, 201, 226, 0.2),
+    rgba(28, 127, 238, 0.2),
+    rgba(95, 21, 242, 0.2),
+    rgba(186, 12, 248, 0.2),
+    rgba(251, 7, 217, 0.2)
+  );
+  background-size: 300% 300%;
+  animation: holographic-shift 4s ease infinite;
+}
+
+@keyframes holographic-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Polychrome - Efecto multicolor brillante */
+.card-edition-polychrome {
+  position: relative;
+  border: 2px solid rgba(255, 215, 0, 0.8);
+  box-shadow: 0 4px 8px rgba(255, 215, 0, 0.4), 0 0 20px rgba(255, 0, 255, 0.3);
+}
+
+.card-edition-effect-polychrome {
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(255, 0, 255, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 50%, rgba(0, 255, 255, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 50% 20%, rgba(255, 255, 0, 0.3) 0%, transparent 50%);
+  animation: polychrome-pulse 2s ease-in-out infinite;
+}
+
+@keyframes polychrome-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .card {
+    width: 70px;
+    height: 100px;
+  }
+  
+  .card-rank {
+    font-size: 16px;
+  }
+  
+  .card-suit {
+    font-size: 14px;
+  }
+  
+  .card-center {
+    font-size: 36px;
+  }
+}
