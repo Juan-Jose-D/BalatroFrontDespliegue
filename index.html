@@ -12,6 +12,10 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // Polyfill para sockjs-client en navegadores
+      window.global = window;
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
