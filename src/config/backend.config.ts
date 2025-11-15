@@ -55,9 +55,9 @@ export const WS_DESTINATIONS = {
   JOIN_ROOM: "/app/room/join",
   LEAVE_ROOM: "/app/room/leave",
   
-  // Juego
-  GAME_MESSAGE: (gameId: string) => `/app/game/${gameId}/message`,
-  CHAT_MESSAGE: (gameId: string) => `/app/game/${gameId}/chat`,
+  // Juego - estos deben coincidir con los @MessageMapping del backend
+  GAME_MESSAGE: (gameId: string) => `/app/game/${gameId}`,
+  CHAT_MESSAGE: (gameId: string) => `/app/chat/${gameId}`,
   EMOTE: (gameId: string) => `/app/game/${gameId}/emote`,
   PING: "/app/ping",
 };

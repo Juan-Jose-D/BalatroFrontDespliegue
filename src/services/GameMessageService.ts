@@ -80,10 +80,10 @@ export class GameMessageService {
       timestamp: new Date().toISOString(),
     };
 
-    webSocketService.send(
-      WS_DESTINATIONS.GAME_MESSAGE(this.currentGameId),
-      message
-    );
+    const destination = WS_DESTINATIONS.GAME_MESSAGE(this.currentGameId);
+    console.log(`📤 Enviando mensaje de juego a: ${destination}`, message);
+
+    webSocketService.send(destination, message);
   }
 
   /**
@@ -103,10 +103,10 @@ export class GameMessageService {
       timestamp: new Date().toISOString(),
     };
 
-    webSocketService.send(
-      WS_DESTINATIONS.CHAT_MESSAGE(this.currentGameId),
-      message
-    );
+    const destination = WS_DESTINATIONS.CHAT_MESSAGE(this.currentGameId);
+    console.log(`📤 Enviando mensaje de chat a: ${destination}`, message);
+
+    webSocketService.send(destination, message);
   }
 
   /**
