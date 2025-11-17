@@ -4,7 +4,7 @@ import './FloatingNotification.css'
 export interface Notification {
   id: string
   message: string
-  type: 'info' | 'success' | 'warning' | 'error' | 'gold' | 'glass'
+  type: 'info' | 'success' | 'warning' | 'error' | 'gold' | 'glass' | 'opponent'
   duration?: number
 }
 
@@ -39,6 +39,7 @@ export default function FloatingNotification({ notification, onRemove }: Floatin
       {notification.type === 'success' && <span className="icon">✓</span>}
       {notification.type === 'error' && <span className="icon">✕</span>}
       {notification.type === 'warning' && <span className="icon">⚠</span>}
+      {notification.type === 'opponent' && <span className="icon">👤</span>}
       <span className="message">{notification.message}</span>
     </div>
   )

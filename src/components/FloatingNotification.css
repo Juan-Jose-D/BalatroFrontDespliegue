@@ -85,6 +85,40 @@
   }
 }
 
+/* Notificación del oponente - estilo del juego */
+.floating-notification.opponent {
+  background: rgba(20, 20, 30, 0.95);
+  border: 2px solid var(--colorRed);
+  box-shadow: 
+    0 0 20px rgba(239, 68, 68, 0.4),
+    inset 0 0 20px rgba(239, 68, 68, 0.1),
+    0 8px 24px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  animation: opponentGlow 2s ease infinite;
+}
+
+@keyframes opponentGlow {
+  0%, 100% {
+    border-color: var(--colorRed);
+    box-shadow: 
+      0 0 20px rgba(239, 68, 68, 0.4),
+      inset 0 0 20px rgba(239, 68, 68, 0.1),
+      0 8px 24px rgba(0, 0, 0, 0.6);
+  }
+  50% {
+    border-color: #ff6b6b;
+    box-shadow: 
+      0 0 30px rgba(239, 68, 68, 0.6),
+      inset 0 0 30px rgba(239, 68, 68, 0.2),
+      0 8px 32px rgba(0, 0, 0, 0.8);
+  }
+}
+
+.floating-notification.opponent .icon {
+  color: var(--colorRed);
+  text-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+}
+
 .floating-notification .message {
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
