@@ -2,51 +2,36 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import BackgroundWrapper from '../components/BackgroundWrapper'
 import menuBg from '../assets/backgrounds/menu-bg.png'
-import Button from '../components/Button'
 
 export default function HowToPlay() {
-  const nav = useNavigate()
+  const navigate = useNavigate()
 
-  const sampleText = `Aquí va la explicación de Balatro. Puedes poner reglas, objetivos y ejemplos.
-  Luego colocaremos un video con una guía paso a paso.`
-
-  const openVideo = () => {
-    const url = 'https://www.youtube.com/watch?v=gA8Xtrjg1fA'
-    window.open(url, '_blank')
+  const handleOpenVideo = () => {
+    window.open('https://www.youtube.com/watch?v=gA8Xtrjg1fA', '_blank')
   }
 
   return (
     <BackgroundWrapper image={menuBg}>
-      <div className="panel" style={{ width: 720 }}>
-        <h2>Cómo jugar</h2>
-
-        <p style={{ color: 'var(--fontColor)', whiteSpace: 'pre-line' }}>
-          {sampleText}
+      <div className="comoDivPrincipal">
+        <h1>¿Cómo jugar?</h1>
+        <p>
+          Balatro es un juego de cartas donde el objetivo es ganar puntos formando combinaciones. Cada jugador recibe 5 cartas y, en su turno, puede robar del mazo o del descarte y luego jugar combinaciones como tríos (3 cartas iguales, 5 puntos) o escaleras (3 o más cartas consecutivas del mismo palo, 10 puntos). La ronda termina cuando un jugador se queda sin cartas o se agota el mazo, y gana quien acumule más puntos.
         </p>
 
-        <div style={{ marginTop: 12 }} className="row">
-          <span className="smallMuted">Ver video:</span>
-          <span
-            className="linkLike"
-            onClick={openVideo}
-            style={{
-              color: 'var(--accentColor)',
-              cursor: 'pointer',
-              textDecoration: 'underline',
-            }}
-          >
+        <div className="comoDivVideo">
+          <strong className="menuSubTitle">Ver video:</strong>
+          <button className="buttonComoVideo" onClick={handleOpenVideo}>
             Tutorial en YouTube
-          </span>
+          </button>
         </div>
 
-        <div style={{ marginTop: 14 }} className="center">
-          <Button
-            variant="neutral"
-            className="btn btnNeutral"
-            onClick={() => nav('/')}
+        <div className="comoDivVolver">
+          <button
+            className="buttonRed"
+            onClick={() => navigate('/')}
           >
             Volver
-          </Button>
+          </button>
         </div>
       </div>
     </BackgroundWrapper>

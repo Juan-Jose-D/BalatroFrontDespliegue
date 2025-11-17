@@ -2,7 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import { GameProvider } from './context/GameContext'
 import Menu from './pages/Menu'
 import Multiplayer from './pages/Multiplayer'
-import CreateRoom from './pages/CreateRoom'
+import SearchRoom from './pages/SearchRoom'
 import JoinRoom from './pages/JoinRoom'
 import CreatePrivateRoom from './pages/CreatePrivateRoom'
 import JoinPrivateRoom from './pages/JoinPrivateRoom'
@@ -10,6 +10,7 @@ import MatchFound from './pages/MatchFound'
 import HowToPlay from './pages/HowToPlay'
 import PlayGame from './pages/PlayGame'
 import PlayMultiplayer from './pages/PlayMultiplayer'
+import Config from './pages/Config'
 
 export default function App() {
   return (
@@ -18,11 +19,11 @@ export default function App() {
       <Route path="/multiplayer" element={<Multiplayer />} />
       
       {/* Matchmaking automático */}
-      <Route path="/create" element={<CreateRoom />} />
+      <Route path="/searchRoom" element={<SearchRoom />} />
       <Route path="/join" element={<JoinRoom />} />
       
       {/* Salas privadas con código */}
-      <Route path="/private/create" element={<CreatePrivateRoom />} />
+      <Route path="createPrivateRoom" element={<CreatePrivateRoom />} />
       <Route path="/private/join" element={<JoinPrivateRoom />} />
       
       {/* Pantalla de partida encontrada */}
@@ -42,7 +43,7 @@ export default function App() {
           </GameProvider>
         } 
       />
-      <Route path="/config" element={<div style={{ padding: 40 }}><h2>Configuración (pendiente)</h2></div>} />
+      <Route path="/config" element={<Config />}/>
     </Routes>
   )
 }

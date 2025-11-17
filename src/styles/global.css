@@ -1,41 +1,280 @@
 :root {
-  --background: #121218;
-  --fontFamily: 'Pixelify Sans', monospace;
+  --background: #000000;
+  --fontFamily: 'Press Start 2P', monospace;
   --fontColor: #ffffff;
 
+  --fontSizeButton: clamp(0.7rem, 1vw, 2rem);
+
+
+  --colorButtonFont: #ffffff;
+  --colorSubtitle: #ddb7e3;
+  --colorRed: #ff0303;
   --colorGreen: #00ff28;
   --colorBlue: #0028ff;
   --colorBlueNeon: #00fff6;
-  --colorRed: #ff0303;
 
-  --panelColor: #92929200;
+  --colorComo: #ff98d62c;
+  --colorComoLink: #152cffd9;
+
+  --colorMultijugadorMenu: #f6797055;
+  --colorBuscar: rgba(131, 28, 233, 0.818);
+  --colorCrear:  rgba(131, 28, 233, 0.818);
 
 
-  --buttonFontSize: 1.3rem;
-  --buttonRadius: 3px;
-  --buttonPadding: 15px 25px;
+  --radiusButton: 7px;
+
+  --paddingButton: 1.5em 5em;
+
+
+
 
   --buttonBgDark: #111;
-  --buttonTextColor: #ffffff;
-  --panelBorder: rgba(255,255,255,0.04);
-  --panelGradient: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  --shadowStrong: 0 6px 20px rgba(2,6,23,0.6);
-  --shadowSoft: 0 6px 18px rgba(2,6,23,0.6);
+
+  --panelBorder: rgba(255, 255, 255, 0.04);
+  --panelGradient: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+  --shadowStrong: 0 6px 20px rgba(2, 6, 23, 0.6);
+  --shadowSoft: 0 6px 18px rgba(2, 6, 23, 0.6);
 
   --accentColor: var(--colorBlueNeon);
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
-html, body, #root {
+/*CLASES GENERALES*/
+html,
+body,
+#root {
+  background: var(--background);
+
   font-family: var(--fontFamily);
   color: var(--fontColor);
-  background: var(--background);
 
   height: 100%;
   margin: 0;
   padding: 0;
 }
+
+button {
+  font-size: var(--fontSizeButton);
+  font-family: var(--fontFamily);
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--colorButtonFont);
+
+  border: none;
+  cursor: crosshair;
+  border-radius: var(--radiusButton);
+
+  padding: var(--paddingButton);
+
+  margin-block: 1vh;
+
+  transition: all 0.1s ease;
+
+  text-shadow:
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
+}
+
+button:hover {
+  transform: translate(-2px, -2px);
+  filter: brightness(1.7);
+}
+
+
+/* MENU */
+.menuDivPrincipal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.menuTitle {
+  text-align: center;
+}
+
+.menuSubTitle {
+  font-size: 0.8rem;
+  color: var(--colorSubtitle);
+}
+
+.menuDivbotones {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 3vh;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2vh;
+}
+
+/*BOTONES COLORES*/
+.buttonRed {
+  background: var(--colorRed);
+}
+
+.buttonGreen {
+  background: var(--colorGreen);
+}
+
+.buttonBlue {
+  background: var(--colorBlue);
+}
+
+.buttonBlueNeon {
+  background: var(--colorBlueNeon);
+}
+
+/*COMO JUGAR*/
+.comoDivPrincipal {
+  width: 75vw;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+
+  text-align: justify;
+
+  justify-content: center;
+  align-items: center;
+
+  background: var(--colorComo);
+  backdrop-filter: blur(2px);
+  border: none;
+}
+
+.comoDivVideo {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.buttonComoVideo {
+  font-weight: bold;
+  font-size: 1rem;
+  text-decoration: underline;
+
+  color: var(--colorComoLink);
+  background: none;
+  border: none;
+  cursor: pointer;
+
+  transition: all 0.3s ease;
+  padding: 0;
+}
+
+.comoDivVolver {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/*MULTIJUGADOR MENU*/
+.multijugadorMenuDivPrincipal{
+  display: flex;
+  flex-direction: column;
+
+  text-align: justify;
+
+  justify-content: center;
+  align-items: center;
+
+  background: var(--colorMultijugadorMenu);
+  backdrop-filter: blur(2px);
+  border: none;
+
+}
+
+.multijugadorMenuDivSecundario{
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  gap: 2vh;
+
+  text-align: center;
+}
+
+.multijugadorMenuDivBuscar{
+  display: flex;
+  flex-direction: column;
+  gap: 0.5vh;
+}
+
+.multijugadorMenuDivSalas{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.multijugadorMenuDivSalasBotones{
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+
+  gap: 0px 0.5vw;
+}
+
+/*BUSCAR SALA MULTIJUGADOR*/
+.buscarDivPrincipal {
+  display: flex;
+  flex-direction: column;
+
+  text-align: justify;
+
+  justify-content: center;
+  align-items: center;
+
+  background: var(--colorBuscar);
+  backdrop-filter: blur(2px);
+  border: none;
+}
+
+.buscarDivSecundario {
+  display: flex;
+  flex-direction: column;
+  width: 55vw;
+  text-align: center;
+}
+
+.buscarDivBotones{
+  display: flex;
+  flex-direction: row;
+  gap: 1vw;
+}
+
+/*CREAR SALA PRIVADA*/
+.createDivPrincipal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: var(--colorCrear);
+
+}
+
+.createDivCopy{
+  display:flex;
+  flex-direction: row;
+  align-items: center;
+  text-align: center;
+
+}
+
+.createDivWait{
+  display:flex;
+  flex-direction: row;
+  align-items: center;
+  text-align: center;
+}
+
+
+/*=======*/
+
 
 .appCenter {
   display: flex;
@@ -45,108 +284,22 @@ html, body, #root {
   padding: 32px;
 }
 
-.panel {
-  background: var(--panelColor);
-  border: 1px solid var(--panelBorder);
-  padding: 24px;
-  border-radius: var(--buttonRadius);
-  backdrop-filter: blur(2px);
-  box-shadow: var(--shadowStrong);
-  color: inherit;
-}
 
-/* BOTONES */
-.btn {
-  font-weight: 700;
-  font-size: var(--buttonFontSize);
-  padding: var(--buttonPadding);
-  text-transform: uppercase;
-  color: var(--buttonTextColor);
-  background-color: var(--buttonBgDark);
-  border: none;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  border-radius: var(--buttonRadius);
-}
 
-.btn:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0 #000;
-  filter: brightness(1.2);
-}
-
-.btn:active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 #000;
-  filter: brightness(0.9);
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  filter: grayscale(0.5);
-}
-
-.btn:disabled:hover {
-  transform: none;
-  box-shadow: none;
-  filter: grayscale(0.5);
-}
-
-/* Variantes */
-.btnPrimary {
-  background: var(--colorBlueNeon);
-  color: var(--fontColor);
-}
-
-.btnSecondary {
-  background: var(--colorGreen);
-  color: var(--fontColor);
-}
-
-.btnDanger {
-  background: var(--colorRed);
-  color: var(--fontColor);
-}
-
-.btnNeutral {
-  background: var(--panelGradient);
-  border: 1px solid var(--panelBorder);
-  color: #e6eef8;
-}
-
-/* MENU */
-.menuRoot { 
-  display: flex; 
-  flex-direction: column; 
-  align-items: center; 
-  gap: 28px; 
-  width: 100%; 
-  max-width: 980px; 
-}
-
-.menuTitle { text-align: center; }
-
-.menuGrid { 
-  display: grid; 
-  grid-template-columns: repeat(2, 260px); 
-  gap: 18px; 
-  justify-content: center; 
-}
 
 /* Multijugador */
-.multiplayerRoot { 
-  display: flex; 
-  flex-direction: column; 
-  align-items: center; 
-  gap: 18px; 
+.multiplayerRoot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
 }
 
-.column { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 12px; 
-  align-items: center; 
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
 }
 
 /* Código de sala */
@@ -168,7 +321,7 @@ html, body, #root {
 .input {
   padding: 12px 14px;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   background: #ffffffdc;
   color: #000000;
   outline: none;
@@ -181,22 +334,8 @@ html, body, #root {
 }
 
 /* Utilidades */
-.row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
 
-.center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
 
-.smallMuted {
-  font-size: 0.9rem;
-  color: rgba(255,255,255,0.6);
-}
 
 .linkLike {
   color: var(--accentColor);
@@ -211,11 +350,11 @@ html, body, #root {
 .textOutlined {
   text-shadow:
     -2px -2px 0 #000,
-     2px -2px 0 #000,
-    -2px  2px 0 #000,
-     2px  2px 0 #000,
-    -2px  0   0 #000,
-     2px  0   0 #000,
-     0   -2px 0 #000,
-     0    2px 0 #000;
+    2px -2px 0 #000,
+    -2px 2px 0 #000,
+    2px 2px 0 #000,
+    -2px 0 0 #000,
+    2px 0 0 #000,
+    0 -2px 0 #000,
+    0 2px 0 #000;
 }

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BackgroundWrapper from '../components/BackgroundWrapper'
 import createBg from '../assets/backgrounds/createRoom-bg.png'
-import Button from '../components/Button'
 import { useRoom } from '../hooks/useRoom'
 
 export default function CreatePrivateRoom() {
@@ -27,10 +26,8 @@ export default function CreatePrivateRoom() {
     autoConnect: false,
   })
 
-  // Cuando ambos jugadores están en la sala y el juego está listo, navegar
   useEffect(() => {
     if (currentGame && currentGame.gameId && roomInfo) {
-      console.log('🎮 ¡Juego iniciado!', currentGame)
       const params = new URLSearchParams({
         gameId: currentGame.gameId,
         player1Id: roomInfo.hostId,
@@ -43,7 +40,6 @@ export default function CreatePrivateRoom() {
     }
   }, [currentGame, nav, playerId, roomInfo])
 
-  // Limpiar error cuando se conecta exitosamente
   useEffect(() => {
     if (isConnected && error) {
       clearError()
@@ -54,7 +50,6 @@ export default function CreatePrivateRoom() {
     if (!isConnected) {
       try {
         await connect()
-        // Esperar un poco para que la conexión se estabilice
         setTimeout(() => createRoom(), 500)
       } catch (err) {
         console.error('Error al conectar:', err)
@@ -80,104 +75,69 @@ export default function CreatePrivateRoom() {
 
   return (
     <BackgroundWrapper image={createBg}>
-      <div className="panel" style={{ width: 520, textAlign: 'center' }}>
+      <div className="createDivPrincipal">
+
         <h2>Crear Sala Privada</h2>
 
-        {/* Estado de conexión */}
-        <div style={{ marginTop: 12, fontSize: '0.9rem', color: '#666' }}>
-          {isConnected ? '🟢 Conectado' : '🔴 Desconectado'}
-        </div>
+        {isConnected ? '🟢 Conectado' : '🔴 Desconectado'}
 
-        {/* Código de sala */}
         {roomCode && (
-          <div style={{ marginTop: 20 }}>
-            <div style={{ fontSize: '1rem', marginBottom: 10, color: '#666' }}>
-              📋 Código de Sala
-            </div>
-            <div style={{ 
-              fontSize: '2.5rem', 
-              fontWeight: 'bold',
-              letterSpacing: '0.2em',
-              fontFamily: 'monospace',
-              backgroundColor: '#f0f0f0',
-              padding: '15px 20px',
-              borderRadius: 8,
-              marginBottom: 12,
-              border: '3px dashed #999'
-            }}>
-              {roomCode}
-            </div>
-            <Button
-              variant="neutral"
-              onClick={handleCopyCode}
-              style={{ fontSize: '0.9rem', padding: '8px 16px' }}
-            >
+          <div className="createDivCopy">
+            <h1>Código de Sala</h1>
+            <h1>{roomCode}</h1>
+
+            <button
+            className="buttonComoVideo"
+            onClick={handleCopyCode}>
               📋 Copiar Código
-            </Button>
+            </button>
           </div>
         )}
 
-        {/* Esperando jugador */}
         {isWaitingForPlayer && (
-          <div style={{ marginTop: 18 }}>
-            <div style={{ fontSize: '1.1rem', marginBottom: 10 }}>
-              👤 Esperando al segundo jugador...
-            </div>
-            <div style={{ fontSize: '0.85rem', color: '#888', fontStyle: 'italic' }}>
-              Comparte el código con otro jugador para comenzar
-            </div>
+          <div className="createDivWait">
+
+            <h1>👤 Esperando al segundo jugador...</h1>            
+
+            <h1>Comparte el código con otro jugador para comenzar</h1>
+
             {roomInfo && (
-              <div style={{ fontSize: '0.75rem', color: '#999', marginTop: 8 }}>
-                Host: {roomInfo.hostName}
-              </div>
+              <h1>Host: {roomInfo.hostName}</h1>
             )}
           </div>
         )}
 
         {error && (
-          <div style={{ 
-            marginTop: 12, 
-            padding: '10px', 
-            backgroundColor: '#fee', 
-            borderRadius: 4,
-            color: '#c00',
-            fontSize: '0.9rem'
-          }}>
-            ⚠️ {error}
-          </div>
+          <h1>{error}</h1>
         )}
 
-        {/* Mensaje cuando no hay sala */}
         {!roomCode && !isWaitingForPlayer && (
-          <div style={{ marginTop: 18, fontSize: '1rem', color: '#888' }}>
-            <p>Crea una sala privada con un código único</p>
-            <p style={{ fontSize: '0.85rem' }}>Comparte el código con un amigo para jugar</p>
+          <div>
+            <h1> Crea una sala privada con un código único </h1>
+            <h1> Comparte el código con un amigo para jugar </h1>
           </div>
         )}
 
-        <div style={{ marginTop: 24 }} className="row center">
-          <Button
-            variant="neutral"
-            className="btn btnNeutral"
-            onClick={handleCancel}
-          >
+        <div className="btn-row center">
+
+          <button
+          className='buttonRed'
+          onClick={handleCancel}>
             {roomCode ? 'Cancelar Sala' : 'Salir'}
-          </Button>
+          </button>
 
           {!roomCode && (
-            <Button
-              variant="primary"
-              className="btn btnPrimary"
-              onClick={handleCreateRoom}
-              disabled={isWaitingForPlayer}
-            >
+            <button
+            className='buttonGreen'
+            onClick={handleCreateRoom}
+            disabled={isWaitingForPlayer}>
               {isConnected ? 'Crear Sala' : 'Conectar y Crear'}
-            </Button>
+            </button>
           )}
+
         </div>
 
       </div>
     </BackgroundWrapper>
   )
 }
-

@@ -2,14 +2,13 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BackgroundWrapper from '../components/BackgroundWrapper'
 import createBg from '../assets/backgrounds/createRoom-bg.png'
-import Button from '../components/Button'
 import { useWebSocket } from '../hooks/useWebSocket'
 
 export default function CreateRoom() {
   const nav = useNavigate()
   const [playerId] = useState(() => `player-${Math.random().toString(36).substr(2, 9)}`)
   const [isConnecting, setIsConnecting] = useState(false)
-  
+
   const {
     isConnected,
     isInQueue,
@@ -23,10 +22,9 @@ export default function CreateRoom() {
     autoConnect: false,
   })
 
-  // Cuando se encuentra una partida, navegar a la pantalla de match found
   useEffect(() => {
     if (currentMatch) {
-      console.log('🎮 ¡Partida encontrada!', currentMatch)
+      console.log('¡Partida encontrada!', currentMatch)
       const params = new URLSearchParams({
         gameId: currentMatch.gameId,
         player1Id: currentMatch.player1Id,
@@ -47,7 +45,6 @@ export default function CreateRoom() {
         joinQueue()
       } catch (err) {
         console.error('Error al conectar:', err)
-        // El error ya se muestra en la UI a través del estado 'error'
       } finally {
         setIsConnecting(false)
       }
@@ -65,63 +62,49 @@ export default function CreateRoom() {
 
   return (
     <BackgroundWrapper image={createBg}>
-      <div className="panel" style={{ width: 520, textAlign: 'center' }}>
+      <div className="buscarDivPrincipal">
         <h2>Buscar Partida Automática</h2>
 
-        {/* Estado de conexión */}
-        <div style={{ marginTop: 12, fontSize: '0.9rem', color: '#666' }}>
+        <div>
           {isConnecting ? '🟡 Conectando...' : (isConnected ? '🟢 Conectado' : '🔴 Desconectado')}
         </div>
 
-        {/* Información de la cola */}
         {isInQueue && (
-          <div style={{ marginTop: 18 }}>
-            <div style={{ fontSize: '1.2rem', marginBottom: 10 }}>
-              ⏳ Buscando oponente...
-            </div>
+          <div className='buscarDivSecundario'>
+            <div>⏳ Buscando oponente...</div>
             {queueStatus && (
-              <div style={{ fontSize: '0.9rem', color: '#666' }}>
+              <div>
                 <p>👥 Jugadores en cola: {queueStatus.playersInQueue}</p>
-                {queueStatus.queuePosition && (
-                  <p>📍 Tu posición: #{queueStatus.queuePosition}</p>
-                )}
-                {queueStatus.estimatedWaitTime && (
-                  <p>⏱️ Tiempo estimado: {queueStatus.estimatedWaitTime}s</p>
-                )}
+                {queueStatus.queuePosition && <p>📍 Tu posición: #{queueStatus.queuePosition}</p>}
+                {queueStatus.estimatedWaitTime && <p>⏱️ Tiempo estimado: {queueStatus.estimatedWaitTime}s</p>}
               </div>
             )}
           </div>
         )}
 
-        {/* Mensaje cuando no está en cola */}
         {!isInQueue && (
-          <div style={{ marginTop: 18, fontSize: '1rem', color: '#888' }}>
+          <div className='buscarDivSecundario'>
             <p>Sistema de matchmaking automático</p>
-            <p style={{ fontSize: '0.85rem' }}>Te emparejaremos con un jugador disponible</p>
+            <p>Te emparejaremos con un jugador disponible</p>
           </div>
         )}
 
-        <div style={{ marginTop: 18 }} className="row center">
-          <Button
-            variant="neutral"
-            className="btn btnNeutral"
-            onClick={handleCancel}
-          >
+        <div className="buscarDivBotones">
+          <button
+          className='buttonRed'
+          onClick={handleCancel}>
             {isInQueue ? 'Cancelar' : 'Salir'}
-          </Button>
+          </button>
 
           {!isInQueue && (
-            <Button
-              variant="primary"
-              className="btn btnPrimary"
-              onClick={handleStartMatchmaking}
-              disabled={isInQueue || isConnecting}
-            >
+            <button
+            className='buttonGreen'
+            onClick={handleStartMatchmaking}
+            disabled={isInQueue || isConnecting}>
               {isConnecting ? 'Conectando...' : (isConnected ? 'Buscar Partida' : 'Conectar y Buscar')}
-            </Button>
+            </button>
           )}
         </div>
-
       </div>
     </BackgroundWrapper>
   )
