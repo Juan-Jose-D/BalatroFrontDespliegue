@@ -1,17 +1,35 @@
 :root {
-  --background: #000000;
   --fontFamily: 'Press Start 2P', monospace;
   --fontColor: #ffffff;
+
+  --radiusButton: 999px;
+  
+  --buttonHeight: 7vh;
+  --buttonWidth: 25vw;
+
+
+  --colorFont: #FFFFFF;
+  --colorH1Line: #ff0303;
+  --colorH2: #00FFF6;
+  --colorH2Line: #ff0303;
+  --colorSubtitle: #0028FF;
+  --colorSubtitleLine: #FFFFFF;
+  
+  --colorGreen: #00FF28;
+  --colorBlue: #0028FF;
+  --colorBlueNeon: #00FFF6;
+  --colorPurple: #8400FF;
+
+  --colorRed: #ff0303;
+  --colorBackPanel: #00000055;
+
 
   --fontSizeButton: clamp(0.7rem, 1vw, 2rem);
 
 
-  --colorButtonFont: #ffffff;
-  --colorSubtitle: #ddb7e3;
-  --colorRed: #ff0303;
-  --colorGreen: #00ff28;
-  --colorBlue: #0028ff;
-  --colorBlueNeon: #00fff6;
+  --colorButtonFont: #FFFFFF;
+  
+  
 
   --colorComo: #ff98d62c;
   --colorComoLink: #152cffd9;
@@ -21,9 +39,7 @@
   --colorCrear:  rgba(131, 28, 233, 0.818);
 
 
-  --radiusButton: 7px;
-
-  --paddingButton: 1.5em 5em;
+  
 
 
 
@@ -46,8 +62,6 @@
 html,
 body,
 #root {
-  background: var(--background);
-
   font-family: var(--fontFamily);
   color: var(--fontColor);
 
@@ -56,14 +70,38 @@ body,
   padding: 0;
 }
 
+h1{
+  font-size: 3rem;
+  text-shadow:
+  -1px -1px 0 var(--colorH1Line),
+  1px -1px 0 var(--colorH1Line),
+  -1px 1px 0 var(--colorH1Line),
+  1px 1px 0 var(--colorH1Line),
+  0 0 10px var(--colorH1Line);
+}
+
+h2{
+  font-size: 1.5rem;
+  color:var(--colorH2);
+  text-shadow:
+  -1px -1px 0 var(--colorH2Line),
+  1px -1px 0 var(--colorH2Line),
+  -1px 1px 0 var(--colorH2Line),
+  1px 1px 0 var(--colorH2Line),
+  0 0 10px var(--colorH2Line);
+}
+
+
 button {
+  width: var(--buttonWidth);
+  height: var(--buttonHeight);
   font-size: var(--fontSizeButton);
   font-family: var(--fontFamily);
   text-transform: uppercase;
   text-align: center;
   color: var(--colorButtonFont);
 
-  border: none;
+  border: 4px solid var(--colorFont);
   cursor: crosshair;
   border-radius: var(--radiusButton);
 
@@ -85,38 +123,74 @@ button:hover {
   filter: brightness(1.7);
 }
 
+input {
+  width: 30vw;
+  height: 7vh;
 
-/* MENU */
-.menuDivPrincipal {
+  font-size: 1.4rem;
+  font-family: var(--fontFamily);
+  text-align: center;
+  color: var(--colorFont);
+
+  background: #000000aa;
+  border: 4px solid var(--colorFont);
+  border-radius: 999px;
+
+  outline: none;
+
+  margin: 1vh 0;
+
+  text-shadow:
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
+
+  transition: all 0.2s ease;
+}
+
+input:focus {
+  border-color: var(--colorBlueNeon);
+  box-shadow: 0 0 12px var(--colorBlueNeon);
+  filter: brightness(1.2);
+}
+
+input::placeholder {
+  color: #ffffff55;
+  text-shadow: none;
+}
+
+
+/*GENERAL*/
+.backgroundPanel{
+  width: 75vw;
+  height: 80vh;
+
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-}
-
-.menuTitle {
   text-align: center;
+  
+
+  background: var(--colorBackPanel);
+  backdrop-filter: blur(1.4px);
+  border: none;
 }
 
-.menuSubTitle {
+.subTitle {
   font-size: 0.8rem;
   color: var(--colorSubtitle);
+  text-shadow:
+  -1px -1px 0 var(--colorSubtitleLine),
+  1px -1px 0 var(--colorSubtitleLine),
+  -1px 1px 0 var(--colorSubtitleLine),
+  1px 1px 0 var(--colorSubtitleLine),
+  0 0 10px var(--colorSubtitleLine);
 }
 
-.menuDivbotones {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 3vh;
-  justify-content: center;
-  align-items: center;
-  margin-top: 2vh;
-}
 
 /*BOTONES COLORES*/
-.buttonRed {
-  background: var(--colorRed);
-}
-
 .buttonGreen {
   background: var(--colorGreen);
 }
@@ -129,23 +203,35 @@ button:hover {
   background: var(--colorBlueNeon);
 }
 
-/*COMO JUGAR*/
-.comoDivPrincipal {
-  width: 75vw;
-  display: flex;
-  flex-direction: column;
-  padding: 1.5rem;
-
-  text-align: justify;
-
-  justify-content: center;
-  align-items: center;
-
-  background: var(--colorComo);
-  backdrop-filter: blur(2px);
-  border: none;
+.buttonPurple {
+  background: var(--colorPurple);
 }
 
+.buttonRed {
+  background: var(--colorRed);
+  width: calc(var(--buttonWidth) * 0.70);
+  height: calc(var(--buttonHeight) * 0.70);
+  font-size: calc(var(--fontSizeButton) * 0.8);
+}
+
+
+/* MENU */
+.menuTitle {
+  text-align: center;
+}
+
+.menuDivbotones {
+  display: flex;
+  flex-direction: column;
+  gap: 3vh;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2vh;
+}
+
+
+
+/*COMO JUGAR*/
 .comoDivVideo {
   display: flex;
   gap: 12px;
@@ -157,7 +243,7 @@ button:hover {
   font-size: 1rem;
   text-decoration: underline;
 
-  color: var(--colorComoLink);
+  color: var(--colorBlueNeon);
   background: none;
   border: none;
   cursor: pointer;
@@ -173,43 +259,6 @@ button:hover {
 }
 
 /*MULTIJUGADOR MENU*/
-.multijugadorMenuDivPrincipal{
-  display: flex;
-  flex-direction: column;
-
-  text-align: justify;
-
-  justify-content: center;
-  align-items: center;
-
-  background: var(--colorMultijugadorMenu);
-  backdrop-filter: blur(2px);
-  border: none;
-
-}
-
-.multijugadorMenuDivSecundario{
-  display: flex;
-  flex-direction: column;
-  padding: 1.5rem;
-  gap: 2vh;
-
-  text-align: center;
-}
-
-.multijugadorMenuDivBuscar{
-  display: flex;
-  flex-direction: column;
-  gap: 0.5vh;
-}
-
-.multijugadorMenuDivSalas{
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
-
 .multijugadorMenuDivSalasBotones{
   display: flex;
   flex-direction: row;
@@ -219,21 +268,11 @@ button:hover {
   gap: 0px 0.5vw;
 }
 
-/*BUSCAR SALA MULTIJUGADOR*/
-.buscarDivPrincipal {
-  display: flex;
-  flex-direction: column;
-
-  text-align: justify;
-
-  justify-content: center;
-  align-items: center;
-
-  background: var(--colorBuscar);
-  backdrop-filter: blur(2px);
-  border: none;
+.multijugadorMenuGap{
+  gap: 3vh;
 }
 
+/*BUSCAR SALA MULTIJUGADOR*/
 .buscarDivSecundario {
   display: flex;
   flex-direction: column;
@@ -241,22 +280,7 @@ button:hover {
   text-align: center;
 }
 
-.buscarDivBotones{
-  display: flex;
-  flex-direction: row;
-  gap: 1vw;
-}
-
 /*CREAR SALA PRIVADA*/
-.createDivPrincipal {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  background: var(--colorCrear);
-
-}
-
 .createDivCopy{
   display:flex;
   flex-direction: row;
@@ -274,87 +298,3 @@ button:hover {
 
 
 /*=======*/
-
-
-.appCenter {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 32px;
-}
-
-
-
-
-/* Multijugador */
-.multiplayerRoot {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 18px;
-}
-
-.column {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  align-items: center;
-}
-
-/* Código de sala */
-.roomCode {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 46px;
-  font-weight: 700;
-  letter-spacing: 8px;
-  padding: 26px 36px;
-  border-radius: 12px;
-  background: var(--panelGradient);
-  border: 1px solid var(--panelBorder);
-  color: var(--accentColor);
-}
-
-/* Inputs */
-.input {
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: #ffffffdc;
-  color: #000000;
-  outline: none;
-  min-width: 260px;
-}
-
-.input:focus {
-  box-shadow: var(--shadowSoft);
-  border-color: var(--accentColor);
-}
-
-/* Utilidades */
-
-
-
-.linkLike {
-  color: var(--accentColor);
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.linkLike:hover {
-  filter: brightness(1.2);
-}
-
-.textOutlined {
-  text-shadow:
-    -2px -2px 0 #000,
-    2px -2px 0 #000,
-    -2px 2px 0 #000,
-    2px 2px 0 #000,
-    -2px 0 0 #000,
-    2px 0 0 #000,
-    0 -2px 0 #000,
-    0 2px 0 #000;
-}

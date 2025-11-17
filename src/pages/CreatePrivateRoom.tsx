@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import BackgroundWrapper from '../components/BackgroundWrapper'
-import createBg from '../assets/backgrounds/createRoom-bg.png'
 import { useRoom } from '../hooks/useRoom'
+import BackgroundWrapper from '../components/BackgroundWrapper'
+import background from '../assets/backgrounds/generalBackground.png'
+
 
 export default function CreatePrivateRoom() {
   const nav = useNavigate()
   const [playerId] = useState(() => `player-${Math.random().toString(36).substr(2, 9)}`)
   const [playerName] = useState(() => `Jugador-${playerId.slice(-4)}`)
-  
+
   const {
     isConnected,
     roomCode,
@@ -74,22 +75,22 @@ export default function CreatePrivateRoom() {
   }
 
   return (
-    <BackgroundWrapper image={createBg}>
-      <div className="createDivPrincipal">
+    <BackgroundWrapper image={background}>
+      <div className="backgroundPanel">
 
-        <h2>Crear Sala Privada</h2>
+        <h1>Crear Sala Privada</h1>
 
         {isConnected ? '🟢 Conectado' : '🔴 Desconectado'}
 
         {roomCode && (
           <div className="createDivCopy">
-            <h1>Código de Sala</h1>
-            <h1>{roomCode}</h1>
+            <h2>Código de Sala</h2>
+            <h2>{roomCode}</h2>
 
             <button
-            className="buttonComoVideo"
-            onClick={handleCopyCode}>
-              📋 Copiar Código
+              className="buttonComoVideo"
+              onClick={handleCopyCode}>
+              Copiar Código
             </button>
           </div>
         )}
@@ -97,12 +98,12 @@ export default function CreatePrivateRoom() {
         {isWaitingForPlayer && (
           <div className="createDivWait">
 
-            <h1>👤 Esperando al segundo jugador...</h1>            
+            <h1>Esperando al segundo jugador...</h1>
 
-            <h1>Comparte el código con otro jugador para comenzar</h1>
+            <p className='subTitle'>Comparte el código con otro jugador para comenzar</p>
 
             {roomInfo && (
-              <h1>Host: {roomInfo.hostName}</h1>
+              <p>Host: {roomInfo.hostName}</p>
             )}
           </div>
         )}
@@ -111,31 +112,21 @@ export default function CreatePrivateRoom() {
           <h1>{error}</h1>
         )}
 
-        {!roomCode && !isWaitingForPlayer && (
-          <div>
-            <h1> Crea una sala privada con un código único </h1>
-            <h1> Comparte el código con un amigo para jugar </h1>
-          </div>
-        )}
 
-        <div className="btn-row center">
 
+        {!roomCode && (
           <button
-          className='buttonRed'
-          onClick={handleCancel}>
-            {roomCode ? 'Cancelar Sala' : 'Salir'}
-          </button>
-
-          {!roomCode && (
-            <button
             className='buttonGreen'
             onClick={handleCreateRoom}
             disabled={isWaitingForPlayer}>
-              {isConnected ? 'Crear Sala' : 'Conectar y Crear'}
-            </button>
-          )}
-
-        </div>
+            {isConnected ? 'Crear Sala' : 'Conectar y Crear'}
+          </button>
+        )}
+        <button
+          className='buttonRed'
+          onClick={handleCancel}>
+          {roomCode ? 'Cancelar Sala' : 'Salir'}
+        </button>
 
       </div>
     </BackgroundWrapper>

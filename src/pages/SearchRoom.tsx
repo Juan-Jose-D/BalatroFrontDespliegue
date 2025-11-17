@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import BackgroundWrapper from '../components/BackgroundWrapper'
-import createBg from '../assets/backgrounds/createRoom-bg.png'
 import { useWebSocket } from '../hooks/useWebSocket'
+import BackgroundWrapper from '../components/BackgroundWrapper'
+import background from '../assets/backgrounds/generalBackground.png'
+
 
 export default function CreateRoom() {
   const nav = useNavigate()
@@ -60,51 +61,38 @@ export default function CreateRoom() {
     nav('/multiplayer')
   }
 
-  return (
-    <BackgroundWrapper image={createBg}>
-      <div className="buscarDivPrincipal">
-        <h2>Buscar Partida Automática</h2>
 
-        <div>
-          {isConnecting ? '🟡 Conectando...' : (isConnected ? '🟢 Conectado' : '🔴 Desconectado')}
-        </div>
+  
+  return (
+    <BackgroundWrapper image={background}>
+      <div className="backgroundPanel multijugadorMenuGap" >
+        <h1>Emparejamiento<br />Automatico</h1>
+
+        {isConnecting ? '🟡 Conectando...' : (isConnected ? '🟢 Conectado' : '🔴 Desconectado')}
 
         {isInQueue && (
           <div className='buscarDivSecundario'>
-            <div>⏳ Buscando oponente...</div>
+            <p>Buscando oponente...</p>
             {queueStatus && (
-              <div>
-                <p>👥 Jugadores en cola: {queueStatus.playersInQueue}</p>
-                {queueStatus.queuePosition && <p>📍 Tu posición: #{queueStatus.queuePosition}</p>}
-                {queueStatus.estimatedWaitTime && <p>⏱️ Tiempo estimado: {queueStatus.estimatedWaitTime}s</p>}
-              </div>
+              <p>Jugadores en cola: {queueStatus.playersInQueue}</p>
             )}
           </div>
         )}
 
         {!isInQueue && (
-          <div className='buscarDivSecundario'>
-            <p>Sistema de matchmaking automático</p>
-            <p>Te emparejaremos con un jugador disponible</p>
-          </div>
-        )}
-
-        <div className="buscarDivBotones">
           <button
-          className='buttonRed'
-          onClick={handleCancel}>
-            {isInQueue ? 'Cancelar' : 'Salir'}
-          </button>
-
-          {!isInQueue && (
-            <button
             className='buttonGreen'
             onClick={handleStartMatchmaking}
             disabled={isInQueue || isConnecting}>
-              {isConnecting ? 'Conectando...' : (isConnected ? 'Buscar Partida' : 'Conectar y Buscar')}
-            </button>
-          )}
-        </div>
+            {isConnecting ? 'Conectando...' : (isConnected ? 'Buscar Partida' : 'Conectar y Buscar')}
+          </button>
+        )}
+
+        <button
+          className='buttonRed'
+          onClick={handleCancel}>
+          {isInQueue ? 'Cancelar' : 'Salir'}
+        </button>
       </div>
     </BackgroundWrapper>
   )

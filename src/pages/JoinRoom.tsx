@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import BackgroundWrapper from '../components/BackgroundWrapper'
-import createBg from '../assets/backgrounds/createRoom-bg.png'
-import Button from '../components/Button'
 import { useWebSocket } from '../hooks/useWebSocket'
+import Button from '../components/Button'
+import BackgroundWrapper from '../components/BackgroundWrapper'
+import background from '../assets/backgrounds/generalBackground.png'
+
+
 
 export default function JoinRoom() {
   const nav = useNavigate()
@@ -54,7 +56,7 @@ export default function JoinRoom() {
   }
 
   return (
-    <BackgroundWrapper image={createBg}>
+    <BackgroundWrapper image={background}>
       <div className="panel" style={{ width: 520, textAlign: 'center' }}>
         <h2>Buscar Partida Automática</h2>
 
