@@ -23,6 +23,12 @@
   --colorRed: #ff0303;
   --colorBackPanel: #00000055;
 
+  --colorTablaInformacion: #3b3636d1;
+  --colorRecurso: #0028FF;
+  --colorRecursoValor: #00FFF6;
+  --colorRecursoProgreso: #00FF28;
+  --colorBorderInformacion: #FFFFFF;
+
 
   --fontSizeButton: clamp(0.7rem, 1vw, 2rem);
 
@@ -37,6 +43,12 @@
   --colorMultijugadorMenu: #f6797055;
   --colorBuscar: rgba(131, 28, 233, 0.818);
   --colorCrear:  rgba(131, 28, 233, 0.818);
+
+  --rarityCommon: #aaaaaa;
+  --rarityUncommon: #4caf50;
+  --rarityRare: #2196f3;
+  --rarityEpic: #9c27b0;
+  --rarityLegendary: #ff9800
 
 
   
@@ -296,5 +308,427 @@ input::placeholder {
   text-align: center;
 }
 
+
+/*SALA DE JUEGO*/
+.jugarDivPrincipal{
+  display: flex;
+  height: 90vh;
+  width: 90vw;
+
+  background: var(--colorBackPanel);
+  backdrop-filter: blur(1.4px);
+  flex-direction: column;
+
+  align-items: center;
+  text-align: center;
+
+  gap: 1vh;
+  padding: 2vw;
+}
+
+.jugarDivDivision{
+  height: 90%;
+  width: 90%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2vw;
+
+  
+}
+
+/*TABLA DE INFORMACION*/
+.jugarTablaInformacion {
+  height: 90%;
+  width: 20%;
+
+  display: flex;
+  flex-direction: column;
+  
+  text-align: center;
+  justify-content: space-between;
+
+  border: 2px solid var(--colorBorderInformacion);
+  border-radius: 10px;
+
+  overflow: hidden;
+  background: var(--colorTablaInformacion);
+  backdrop-filter: blur(6px);
+}
+
+.jugarTablaInformacion > * {
+  width: 100%;
+  padding: 0.8rem 1rem;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  border-bottom: 1px solid var(--colorBorderInformacion);
+
+
+  font-size: 1.1rem;
+}
+
+
+.jugarRecursoProgreso {
+  height: 1vh;
+  padding: 0;
+  border-radius: 999px;
+  background-color: var(--colorRecursoProgreso);
+  transition: width 0.3s ease;
+}
+
+.jugarRecursos {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.jugarRecursoNombre {
+  color: var(--colorRecurso);
+  font-weight: 600;
+}
+
+.jugarRecursoValor {
+  color: var(--colorRecursoValor);
+  font-weight: bold;
+}
+
+
+.jugarBottonesAcciones{
+  display: flex;
+  flex-direction: row;
+
+  justify-content: center;
+  align-items: center;
+
+  gap: 1vw;
+}
+
+.jugarMazo {
+  display: flex;
+  flex-direction: row;
+
+  justify-content: center;
+  align-items: center;
+
+  gap: 1vw;
+}
+
+/*VICTORIA*/
+.jugarDivVictoria{
+  display: flex;
+  height: 60vh;
+  width: 90vw;
+
+  background: var(--colorBackPanel);
+  backdrop-filter: blur(1.4px);
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  gap: 1vh;
+  padding: 2vw;
+}
+
+.jugarVictoriaAcciones{
+  display: flex;
+  
+  gap: 2vw;
+
+  align-items: center;
+  justify-content: center;
+}
+
+/*TIENDA*/
+.jugarTiendaDivPrincipal{
+  display: flex;
+  height: 90vh;
+  width: 90vw;
+
+  background: var(--colorBackPanel);
+  backdrop-filter: blur(1.4px);
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  gap: 1vh;
+  padding: 2vw;
+}
+
+/*OBEJTOIS*/
+.jugarTiendaDivObjetos {
+  display: flex;
+  height: 70%;
+  flex-wrap: wrap;
+  gap: 2vw;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.jugarTiendaItem {
+  width: 14vw;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
+  padding: 1rem;
+  border-radius: 12px;
+  border: 2px solid var(--colorBorderInformacion);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  box-sizing: border-box;
+}
+
+.jugarTiendaItem:hover {
+  transform: scale(1.04);
+}
+
+.jugarTiendaItem.purchased {
+  opacity: 0.6;
+  pointer-events: none;
+}
+.jugarTiendaEnhancementCard {
+  width: 10vw;
+  min-height: 14vh;
+
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
+
+  border: 2px solid var(--colorBorderInformacion);
+  border-radius: 10px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0.8rem;
+  gap: 0.6rem;
+  text-align: center;
+
+  transition: transform 0.15s ease;
+  box-sizing: border-box;
+}
+
+.jugarTiendaEnhancementCard:hover {
+  transform: scale(1.03);
+}
+
+.jugarTiendaEnhancementEmoji {
+  font-size: 1.8rem;
+}
+
+.jugarTiendaEnhancementName {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--colorRecurso);
+
+  text-align: center;
+  max-width: 100%;
+
+  /* la magia: permite que palabras largas se partan */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.jugarTiendaEnhancementDescription {
+  font-size: 0.55rem;
+  color: var(--colorRecursoValor);
+  line-height: 1rem;
+  max-width: 90%;
+}
+.buttonBuy {
+  width: 9vw;
+  height: 4vh;
+  font-size: 0.6rem;
+  padding: 0.3rem;
+
+  border-width: 2px;
+  border-radius: 6px;
+  border-color: var(--colorFont);
+
+  cursor: pointer;
+  text-transform: uppercase;
+  color: var(--colorButtonFont);
+  background: var(--colorGreen);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+.buttonBuy:hover:not(:disabled) {
+  transform: scale(1.03);
+}
+
+.buttonBuy:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
+.jugarTiendaAcciones{
+  display: flex;
+  
+  gap: 2vw;
+
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===========================
+   CARTA DEL JOKER (BASE)
+   =========================== */
+.jokerDivPrincipal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5vh;
+}
+
+.jokerCard {
+  all: unset;
+
+  width: 95%;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
+
+  border: 3px solid;
+  border-radius: 10px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2vh;
+
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  text-align: center;
+  box-sizing: border-box;
+}
+.jokerCard * {
+  max-width: 100%;
+}
+
+
+.jokerCard:hover:not(:disabled) {
+  transform: scale(1.03);
+}
+
+.jokerCard:disabled {
+  opacity: 0.6;
+}
+
+.jokerCardSmall {
+  width: 10vw;
+  padding: 0.7rem;
+}
+
+.jokerCardMedium {
+  width: 12vw;
+}
+
+.jokerCardLarge {
+  width: 15vw;
+}
+
+
+/* CONTENIDO */
+.jokerEmoji {
+  font-size: 2rem;
+  width: 100%;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.jokerName {
+  font-size: 0.7rem;
+  text-align: center;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.jokerDescription {
+  font-size: 0.5rem;
+  line-height: 1.1rem;
+
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+
+  max-width: 100%;
+}
+
+
+.jokerRarity {
+  font-size: 0.5rem;
+}
+
+
+/* COSTOS */
+.jokerValue {
+  font-size: 0.75rem;
+}
+
+.jokerCost {
+  color: var(--colorGreen);
+}
+
+.jokerSell {
+  color: var(--colorYellow);
+}
+
+
+/* RAREZAS DINÁMICAS */
+.jokerRaritycommon {
+  border-color: var(--rarityCommon);
+}
+
+.jokerRarityuncommon {
+  border-color: var(--rarityUncommon);
+}
+
+.jokerRarityrare {
+  border-color: var(--rarityRare);
+}
+
+.jokerRarityepic {
+  border-color: var(--rarityEpic);
+}
+
+.jokerRaritylegendary {
+  border-color: var(--rarityLegendary);
+}
+
+
+/*DERROTA*/
+.jugarDivDerrota{
+  display: flex;
+  height: 70vh;
+  width: 50vw;
+
+  background: var(--colorBackPanel);
+  backdrop-filter: blur(1.4px);
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  gap: 1vh;
+  padding: 2vw;
+}
 
 /*=======*/

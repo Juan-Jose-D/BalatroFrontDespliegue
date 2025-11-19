@@ -11,7 +11,6 @@ import MatchFound from './pages/MatchFound'
 import HowToPlay from './pages/HowToPlay'
 import PlayGame from './pages/PlayGame'
 import PlayMultiplayer from './pages/PlayMultiplayer'
-import Config from './pages/Config'
 
 // Wrapper para PlayMultiplayer que provee el contexto multijugador
 function PlayMultiplayerWrapper() {
@@ -71,7 +70,6 @@ export default function App() {
           </GameProvider>
         } 
       />
-      <Route path="/config" element={<Config />}/>
     </Routes>
   )
 }
