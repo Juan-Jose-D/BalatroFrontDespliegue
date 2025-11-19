@@ -4,14 +4,11 @@ import Card from '../components/game/Card'
 import JokerCard from '../components/game/JokerCard'
 import Shop from '../components/Shop'
 import FloatingNotification from '../components/FloatingNotification'
-import playBg from '../assets/backgrounds/play-bg.png'
 import { useGame } from '../context/GameContext'
 import { useNotifications } from '../hooks/useNotifications'
 import { POKER_HANDS } from '../types/poker'
-import { getRandomJoker } from '../data/jokers'
-import { createJokerInstance } from '../utils/jokerEffects'
-import { calculateInterest } from '../utils/shopLogic'
 import { calculateAllCardEffects } from '../utils/cardEnhancements'
+import { calculateInterest } from '../utils/shopLogic'
 import type { ShopItem } from '../types/shop'
 
 import background from '../assets/backgrounds/generalBackground.png'
@@ -40,63 +37,27 @@ export default function PlayGame() {
     selectedCards
   } = useGame()
 
+  // -----------------------
+  // NOTIFICACIONES AUTOMÁTICAS
+  // -----------------------
   useEffect(() => {
-    if (selectedCards.length > 0) {
-      const effects = calculateAllCardEffects(selectedCards)
+    if (selectedCards.length === 0) return
 
-      if (effects.totalMoney > 0) {
-        addNotification(`+$${effects.totalMoney} de cartas Gold!`, 'gold', 2500)
-      }
+    const effects = calculateAllCardEffects(selectedCards)
 
-      if (effects.brokenCards.length > 0) {
-        const cardNames = effects.brokenCards.map(c => c.rank).join(', ')
-        addNotification(`💥 ${cardNames} se rompió!`, 'glass', 2500)
-      }
+    if (effects.totalMoney > 0) {
+      addNotification(`+$${effects.totalMoney} de cartas Gold!`, 'gold', 2500)
+    }
+
+    if (effects.brokenCards.length > 0) {
+      const cardNames = effects.brokenCards.map(c => c.rank).join(', ')
+      addNotification(`💥 ${cardNames} se rompió!`, 'glass', 2500)
     }
   }, [gameState.currentRound.score])
 
-  const getBlindColor = () => {
-    switch (gameState.blind) {
-      case 'small': return 'small-blind'
-      case 'big': return 'big-blind'
-      case 'boss': return 'boss-blind'
-      default: return 'default-blind'
-    }
-  }
-
-  const handleAddTestJoker = () => {
-    const randomJoker = getRandomJoker()
-    const jokerInstance = createJokerInstance(randomJoker)
-    const added = addJoker(jokerInstance)
-    if (!added) alert('No hay espacio para más Jokers (máximo 5)')
-  }
-
-  const handleTestEdition = () => {
-    if (gameState.hand.length === 0) return
-
-    const editions = ['foil', 'holographic', 'polychrome']
-    const randomEdition = editions[Math.floor(Math.random() * editions.length)]
-    const randomCard = gameState.hand[Math.floor(Math.random() * gameState.hand.length)]
-
-    applyEditionToCard(randomCard.id, randomEdition)
-    alert(`Edición ${randomEdition} aplicada a ${randomCard.rank}${randomCard.suit}`)
-  }
-
-  const handleTestEnhancement = () => {
-    if (gameState.hand.length === 0) return
-
-    const enhancements = ['bonus', 'mult', 'wild', 'glass', 'steel', 'stone', 'gold', 'lucky']
-    const randomEnhancement = enhancements[Math.floor(Math.random() * enhancements.length)]
-    const randomCard = gameState.hand[Math.floor(Math.random() * gameState.hand.length)]
-
-    applyEnhancementToCard(randomCard.id, randomEnhancement)
-    alert(`Mejora ${randomEnhancement} aplicada a ${randomCard.rank}${randomCard.suit}`)
-  }
-
   // -----------------------
-  // PANTALLA DE VICTORIA
+  // PANTALLA: VICTORIA
   // -----------------------
-
   if (gameState.gameStatus === 'won') {
     const interest = calculateInterest(gameState.money)
 
@@ -120,37 +81,26 @@ export default function PlayGame() {
     return (
       <BackgroundWrapper image={background}>
         <div className="jugarDivVictoria">
-
-          <h1 >¡VICTORIA!</h1>
+          <h1>¡VICTORIA!</h1>
           <h2>{blindInfo.name} Completado</h2>
 
           <div className="victory-info">
-            <div className='jugarRecursos'>
-              <p className="jugarRecursoNombre">Puntuación:</p>
-              <p className="jugarRecursoValor">{gameState.currentRound.score} / {blindInfo.scoreNeeded}</p>
-            </div>
-            <div className='jugarRecursos'>
-              <p className="jugarRecursoNombre">Recompensa:</p>
-              <p className="jugarRecursoValor">+${blindInfo.reward}</p>
-            </div>
-            <div className='jugarRecursos'>
-              <p className="jugarRecursoNombre">Interés:</p>
-              <p className="jugarRecursoValor">+${interest}</p>
-            </div>
-            <div className='jugarRecursos'>
-              <p className="jugarRecursoNombre">Dinero Total:</p>
-              <p className="jugarRecursoValor">${gameState.money + interest}</p>
-            </div>
+            {[
+              ['Puntuación:', `${gameState.currentRound.score} / ${blindInfo.scoreNeeded}`],
+              ['Recompensa:', `+$${blindInfo.reward}`],
+              ['Interés:', `+$${interest}`],
+              ['Dinero Total:', `$${gameState.money + interest}`],
+            ].map(([label, value]) => (
+              <div key={label} className="jugarRecursos">
+                <p className="jugarRecursoNombre">{label}</p>
+                <p className="jugarRecursoValor">{value}</p>
+              </div>
+            ))}
           </div>
 
           <div className="jugarVictoriaAcciones">
-            <button className="buttonRed" onClick={restartGame}>
-              Reiniciar Juego
-            </button>
-
-            <button className="buttonBlue" onClick={() => setShowShop(true)}>
-              Ir a la Tienda
-            </button>
+            <button className="buttonRed" onClick={restartGame}>Reiniciar Juego</button>
+            <button className="buttonBlue" onClick={() => setShowShop(true)}>Ir a la Tienda</button>
           </div>
         </div>
       </BackgroundWrapper>
@@ -158,28 +108,30 @@ export default function PlayGame() {
   }
 
   // -----------------------
-  // PANTALLA DE DERROTA
+  // PANTALLA: DERROTA
   // -----------------------
-
   if (gameState.gameStatus === 'lost') {
     return (
       <BackgroundWrapper image={background}>
-        <div className='jugarDivDerrota'>
+        <div className="jugarDivDerrota">
           <h1>GAME OVER</h1>
           <h2>Te quedaste sin manos</h2>
-          <div className='jugarRecursos'>
+
+          <div className="jugarRecursos">
             <p className="jugarRecursoNombre">Puntuación:</p>
             <p className="jugarRecursoValor">{gameState.currentRound.score} / {blindInfo.scoreNeeded}</p>
           </div>
-          <div className='jugarRecursos'>
+
+          <div className="jugarRecursos">
             <p className="jugarRecursoNombre">Faltaban:</p>
             <p className="jugarRecursoValor">{blindInfo.scoreRemaining} puntos</p>
           </div>
-          <div className='jugarRecursos'>
-            <p className="jugarRecursoNombre">Ante alcanzado: </p>
+
+          <div className="jugarRecursos">
+            <p className="jugarRecursoNombre">Ante alcanzado:</p>
             <p className="jugarRecursoValor">{gameState.ante}</p>
           </div>
-          
+
           <button className="buttonGreen" onClick={restartGame}>
             Intentar de Nuevo
           </button>
@@ -189,40 +141,42 @@ export default function PlayGame() {
   }
 
   // -----------------------
-  // JUEGO NORMAL
+  // PANTALLA: JUEGO NORMAL
   // -----------------------
-
   return (
     <BackgroundWrapper image={background}>
       <div className="jugarDivPrincipal">
 
         {/* HEADER */}
         <h1>Ante {gameState.ante} - {blindInfo.name}</h1>
-        <div className='jugarDivDivision'>
-          {/* INFORMACION */}
-          <div className='jugarTablaInformacion'>
+
+        <div className="jugarDivDivision">
+
+          {/* INFO */}
+          <div className="jugarTablaInformacion">
             <div className="jugarRecursoNombre">Objetivo</div>
-            <div className="jugarRecursoValor">{gameState.currentRound.score} / {blindInfo.scoreNeeded}</div>
-            <div className="jugarRecursoProgreso" style={{ width: `${blindInfo.progress}%` }}></div>
-            <div className='jugarRecursoDivision'></div>
-
-            <div className='jugarRecursos'>
-              <div className="jugarRecursoNombre">Manos</div>
-              <div className="jugarRecursoValor">{gameState.currentRound.handsRemaining}</div>
+            <div className="jugarRecursoValor">
+              {gameState.currentRound.score} / {blindInfo.scoreNeeded}
             </div>
 
-            <div className='jugarRecursos'>
-              <div className="jugarRecursoNombre">Descartes</div>
-              <div className="jugarRecursoValor">{gameState.currentRound.discardsRemaining}</div>
-            </div>
+            <div className="jugarRecursoProgreso" style={{ width: `${blindInfo.progress}%` }} />
+            <div className="jugarRecursoDivision" />
 
-            <div className='jugarRecursos'>
-              <div className="jugarRecursoNombre">Dinero</div>
-              <div className="jugarRecursoValor">${gameState.money}</div>
-            </div>
-
+            {[
+              ['Manos', gameState.currentRound.handsRemaining],
+              ['Descartes', gameState.currentRound.discardsRemaining],
+              ['Dinero', `$${gameState.money}`],
+            ].map(([label, value]) => (
+              <div key={label} className="jugarRecursos">
+                <div className="jugarRecursoNombre">{label}</div>
+                <div className="jugarRecursoValor">{value}</div>
+              </div>
+            ))}
           </div>
-          <div className='jugarZonaJuego'>
+
+          {/* ZONA DE JUEGO */}
+          <div className="jugarZonaJuego">
+
             {/* INFO DE MANO */}
             <div className={`panel handinfo-panel ${currentHandScore ? 'handinfo-active' : ''}`}>
               {currentHandScore ? (
@@ -231,9 +185,7 @@ export default function PlayGame() {
                   <span className="handinfo-score">{currentHandScore.score} pts</span>
                   ({currentHandScore.chips} × {currentHandScore.multiplier})
                 </>
-              ) : (
-                ' '
-              )}
+              ) : ' '}
             </div>
 
             {/* JOKERS */}
@@ -247,6 +199,7 @@ export default function PlayGame() {
                   {gameState.jokers.map(joker => (
                     <div key={joker.instanceId} className="joker-wrapper">
                       <JokerCard joker={joker} size="medium" />
+
                       <button
                         className="joker-sell-btn"
                         onClick={() => {
@@ -262,7 +215,6 @@ export default function PlayGame() {
                   ))}
                 </div>
               </div>
-
             )}
 
             {/* CARTAS */}
@@ -274,44 +226,49 @@ export default function PlayGame() {
           </div>
         </div>
 
-
-
-
-
-
-
-
-
-
-        {/* BOTONES ACCIONES*/}
+        {/* ACCIONES */}
         <div className="jugarBottonesAcciones">
+          {/*
+  <button
+    className="btn-secondary"
+    onClick={handleAddTestJoker}
+  >
+    + Joker (Test)
+  </button>
 
+  <button
+    className="btn-secondary"
+    onClick={handleTestEdition}
+  >
+    + Edición (Test)
+  </button>
+
+  <button
+    className="btn-secondary"
+    onClick={handleTestEnhancement}
+  >
+    + Mejora (Test)
+  </button>
+*/}
 
           <button className="buttonBlue" onClick={discardSelectedCards} disabled={!canDiscard}>
             Descartar ({gameState.currentRound.discardsRemaining})
           </button>
+
           <button className="buttonGreen" onClick={playSelectedHand} disabled={!canPlay}>
             Jugar Mano ({gameState.currentRound.handsRemaining})
           </button>
-
-          {/*
-          <button className="btn-secondary" onClick={handleAddTestJoker}>+ Joker (Test)</button>
-          <button className="btn-secondary" onClick={handleTestEdition}>+ Edición (Test)</button>
-          <button className="btn-secondary" onClick={handleTestEnhancement}>+ Mejora (Test)</button>
-          */}
         </div>
 
-        <button className="buttonRed" onClick={restartGame}>
-          Reiniciar
-        </button>
+        <button className="buttonRed" onClick={restartGame}>Reiniciar</button>
 
       </div>
 
       {/* NOTIFICACIONES */}
-      {notifications.map(notification => (
+      {notifications.map(n => (
         <FloatingNotification
-          key={notification.id}
-          notification={notification}
+          key={n.id}
+          notification={n}
           onRemove={removeNotification}
         />
       ))}

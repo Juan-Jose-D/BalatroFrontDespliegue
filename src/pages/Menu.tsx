@@ -1,4 +1,3 @@
-import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import BackgroundWrapper from '../components/BackgroundWrapper'
 import background from '../assets/backgrounds/generalBackground.png'
@@ -37,17 +36,17 @@ export default function Menu() {
           >
             ¿Cómo jugar?
           </button>
-
         </div>
 
         <div>
           <button
             className="buttonRed"
-            onClick={() => { /* window.close() */ }}
+            onClick={() => {}}
           >
             Salir
           </button>
         </div>
+
       </div>
     </BackgroundWrapper>
   )

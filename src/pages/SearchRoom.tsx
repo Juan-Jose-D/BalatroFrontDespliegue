@@ -4,10 +4,12 @@ import { useWebSocket } from '../hooks/useWebSocket'
 import BackgroundWrapper from '../components/BackgroundWrapper'
 import background from '../assets/backgrounds/generalBackground.png'
 
-
 export default function CreateRoom() {
   const nav = useNavigate()
-  const [playerId] = useState(() => `player-${Math.random().toString(36).substr(2, 9)}`)
+
+  const [playerId] = useState(
+    () => `player-${Math.random().toString(36).substr(2, 9)}`
+  )
   const [isConnecting, setIsConnecting] = useState(false)
 
   const {
@@ -23,21 +25,23 @@ export default function CreateRoom() {
     autoConnect: false,
   })
 
+  // Redirige cuando se encuentra partida
   useEffect(() => {
-    if (currentMatch) {
-      console.log('¡Partida encontrada!', currentMatch)
-      const params = new URLSearchParams({
-        gameId: currentMatch.gameId,
-        player1Id: currentMatch.player1Id,
-        player1Name: currentMatch.player1Name,
-        player2Id: currentMatch.player2Id,
-        player2Name: currentMatch.player2Name,
-        playerId: playerId
-      })
-      nav(`/match-found?${params.toString()}`)
-    }
+    if (!currentMatch) return
+
+    const params = new URLSearchParams({
+      gameId: currentMatch.gameId,
+      player1Id: currentMatch.player1Id,
+      player1Name: currentMatch.player1Name,
+      player2Id: currentMatch.player2Id,
+      player2Name: currentMatch.player2Name,
+      playerId,
+    })
+
+    nav(`/match-found?${params.toString()}`)
   }, [currentMatch, nav, playerId])
 
+  // Inicia matchmaking
   const handleStartMatchmaking = async () => {
     if (!isConnected) {
       setIsConnecting(true)
@@ -49,29 +53,34 @@ export default function CreateRoom() {
       } finally {
         setIsConnecting(false)
       }
-    } else {
-      joinQueue()
+      return
     }
+
+    joinQueue()
   }
 
+  // Cancelar / salir
   const handleCancel = () => {
-    if (isInQueue) {
-      leaveQueue()
-    }
+    if (isInQueue) leaveQueue()
     nav('/multiplayer')
   }
 
-
-  
   return (
     <BackgroundWrapper image={background}>
-      <div className="backgroundPanel multijugadorMenuGap" >
-        <h1>Emparejamiento<br />Automatico</h1>
+      <div className="backgroundPanel multijugadorMenuGap">
 
-        {isConnecting ? '🟡 Conectando...' : (isConnected ? '🟢 Conectado' : '🔴 Desconectado')}
+        <h1>Emparejamiento<br />Automático</h1>
 
+        {/* Estado de conexión */}
+        {isConnecting
+          ? '🟡 Conectando...'
+          : isConnected
+          ? '🟢 Conectado'
+          : '🔴 Desconectado'}
+
+        {/* Info de cola */}
         {isInQueue && (
-          <div className='buscarDivSecundario'>
+          <div className="buscarDivSecundario">
             <p>Buscando oponente...</p>
             {queueStatus && (
               <p>Jugadores en cola: {queueStatus.playersInQueue}</p>
@@ -79,20 +88,29 @@ export default function CreateRoom() {
           </div>
         )}
 
+        {/* Botón buscar partida */}
         {!isInQueue && (
           <button
-            className='buttonGreen'
+            className="buttonGreen"
             onClick={handleStartMatchmaking}
-            disabled={isInQueue || isConnecting}>
-            {isConnecting ? 'Conectando...' : (isConnected ? 'Buscar Partida' : 'Conectar y Buscar')}
+            disabled={isConnecting}
+          >
+            {isConnecting
+              ? 'Conectando...'
+              : isConnected
+              ? 'Buscar Partida'
+              : 'Conectar y Buscar'}
           </button>
         )}
 
+        {/* Botón cancelar o salir */}
         <button
-          className='buttonRed'
-          onClick={handleCancel}>
+          className="buttonRed"
+          onClick={handleCancel}
+        >
           {isInQueue ? 'Cancelar' : 'Salir'}
         </button>
+
       </div>
     </BackgroundWrapper>
   )

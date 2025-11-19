@@ -2,7 +2,6 @@ import { useState } from 'react'
 import type { ShopItem } from '../types/shop'
 import { generateShopItems, calculateRerollCost } from '../utils/shopLogic'
 import JokerCard from './game/JokerCard'
-import './Shop.css'
 
 interface ShopProps {
   ante: number

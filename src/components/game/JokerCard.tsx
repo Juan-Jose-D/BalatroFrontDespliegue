@@ -1,6 +1,5 @@
 import type { JokerInstance } from '../../types/joker'
 import { RARITY_COLORS, RARITY_NAMES } from '../../types/joker'
-import './JokerCard.css'
 
 interface JokerCardProps {
   readonly joker: JokerInstance
@@ -12,7 +11,7 @@ export default function JokerCard({ joker, onClick, size = 'medium' }: JokerCard
   const rarity = joker.rarity
 
   return (
-    <div className='jokerDivPrincipal'>
+    <div className=''>
       <button
         type="button"
         className={`jokerCard jokerCard${size.charAt(0).toUpperCase() + size.slice(1)} jokerRarity${rarity}`}

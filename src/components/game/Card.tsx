@@ -1,6 +1,5 @@
 import type { Card as CardType } from '../../types/card'
 import { SUIT_SYMBOLS, SUIT_COLORS } from '../../types/card'
-import './Card.css'
 
 interface CardProps {
   readonly card: CardType
@@ -9,10 +8,15 @@ interface CardProps {
   readonly disabled?: boolean
 }
 
-export default function Card({ card, onClick, faceDown = false, disabled = false }: CardProps) {
+export default function Card({
+  card,
+  onClick,
+  faceDown = false,
+  disabled = false
+}: CardProps) {
   const color = SUIT_COLORS[card.suit]
   const symbol = SUIT_SYMBOLS[card.suit]
-  
+
   const handleClick = () => {
     if (!disabled && onClick) {
       onClick()
@@ -33,11 +37,17 @@ export default function Card({ card, onClick, faceDown = false, disabled = false
   }
 
   const editionClass = card.edition ? `card-edition-${card.edition}` : ''
-  
+
   return (
     <button
       type="button"
-      className={`card card-face ${card.selected ? 'card-selected' : ''} ${disabled ? 'card-disabled' : ''} ${editionClass}`}
+      className={`
+        card
+        card-face
+        ${card.selected ? 'card-selected' : ''}
+        ${disabled ? 'card-disabled' : ''}
+        ${editionClass}
+      `}
       onClick={handleClick}
       disabled={disabled}
       data-color={color}

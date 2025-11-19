@@ -4,74 +4,54 @@ import { useRoom } from '../hooks/useRoom'
 import BackgroundWrapper from '../components/BackgroundWrapper'
 import background from '../assets/backgrounds/generalBackground.png'
 
-
 export default function CreatePrivateRoom() {
   const nav = useNavigate()
-  const [playerId] = useState(() => `player-${Math.random().toString(36).substr(2, 9)}`)
+
+  const [playerId] = useState(() => `player-${Math.random().toString(36).slice(2, 11)}`)
   const [playerName] = useState(() => `Jugador-${playerId.slice(-4)}`)
 
   const {
     isConnected,
     roomCode,
     roomInfo,
-    isWaitingForPlayer,
     currentGame,
-    error,
     connect,
     createRoom,
     leaveRoom,
-    clearError,
   } = useRoom({
     playerId,
     playerName,
     autoConnect: false,
   })
 
+  // Redirigir cuando ya existe partida creada
   useEffect(() => {
-    if (currentGame && currentGame.gameId && roomInfo) {
-      const params = new URLSearchParams({
-        gameId: currentGame.gameId,
-        player1Id: roomInfo.hostId,
-        player1Name: roomInfo.hostName || 'Jugador 1',
-        player2Id: roomInfo.guestId || '',
-        player2Name: roomInfo.guestName || 'Jugador 2',
-        playerId: playerId
-      })
-      nav(`/match-found?${params.toString()}`)
-    }
+    if (!currentGame || !currentGame.gameId || !roomInfo) return
+
+    const params = new URLSearchParams({
+      gameId: currentGame.gameId,
+      player1Id: roomInfo.hostId,
+      player1Name: roomInfo.hostName || 'Jugador 1',
+      playerId,
+    })
+
+    nav(`/match-found?${params.toString()}`)
   }, [currentGame, nav, playerId, roomInfo])
 
-  useEffect(() => {
-    if (isConnected && error) {
-      clearError()
-    }
-  }, [isConnected, error, clearError])
-
   const handleCreateRoom = async () => {
-    if (!isConnected) {
-      try {
-        await connect()
-        setTimeout(() => createRoom(), 500)
-      } catch (err) {
-        console.error('Error al conectar:', err)
-      }
-    } else {
-      createRoom()
-    }
+    if (!isConnected) await connect()
+    createRoom()
   }
 
   const handleCancel = () => {
-    if (roomCode) {
-      leaveRoom()
-    }
+    if (roomCode) leaveRoom()
     nav('/multiplayer')
   }
 
   const handleCopyCode = () => {
-    if (roomCode) {
-      navigator.clipboard.writeText(roomCode)
-      alert(`Código copiado: ${roomCode}`)
-    }
+    if (!roomCode) return
+    navigator.clipboard.writeText(roomCode)
+    alert(`Código copiado: ${roomCode}`)
   }
 
   return (
@@ -84,47 +64,22 @@ export default function CreatePrivateRoom() {
 
         {roomCode && (
           <div className="createDivCopy">
-            <h2>Código de Sala</h2>
+            <h2>Código de Sala:</h2>
             <h2>{roomCode}</h2>
 
-            <button
-              className="buttonComoVideo"
-              onClick={handleCopyCode}>
+            <button className="buttonComoVideo" onClick={handleCopyCode}>
               Copiar Código
             </button>
           </div>
         )}
 
-        {isWaitingForPlayer && (
-          <div className="createDivWait">
-
-            <h1>Esperando al segundo jugador...</h1>
-
-            <p className='subTitle'>Comparte el código con otro jugador para comenzar</p>
-
-            {roomInfo && (
-              <p>Host: {roomInfo.hostName}</p>
-            )}
-          </div>
-        )}
-
-        {error && (
-          <h1>{error}</h1>
-        )}
-
-
-
         {!roomCode && (
-          <button
-            className='buttonGreen'
-            onClick={handleCreateRoom}
-            disabled={isWaitingForPlayer}>
+          <button className="buttonGreen" onClick={handleCreateRoom}>
             {isConnected ? 'Crear Sala' : 'Conectar y Crear'}
           </button>
         )}
-        <button
-          className='buttonRed'
-          onClick={handleCancel}>
+
+        <button className="buttonRed" onClick={handleCancel}>
           {roomCode ? 'Cancelar Sala' : 'Salir'}
         </button>
 
