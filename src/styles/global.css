@@ -1,221 +1,827 @@
 :root {
-  --background: #121218;
-  --fontFamily: 'Pixelify Sans', monospace;
+  --fontFamily: 'Press Start 2P', monospace;
   --fontColor: #ffffff;
-
-  --colorGreen: #00ff28;
-  --colorBlue: #0028ff;
-  --colorBlueNeon: #00fff6;
+  --radiusButton: 999px;
+  --buttonHeight: 7vh;
+  --buttonWidth: 25vw;
+  --colorFont: #FFFFFF;
+  --colorH1Line: #ff0303;
+  --colorH2: #00FFF6;
+  --colorH2Line: #ff0303;
+  --colorSubtitle: #0028FF;
+  --colorSubtitleLine: #FFFFFF;
+  --colorGreen: #00FF28;
+  --colorBlue: #0028FF;
+  --colorBlueNeon: #00FFF6;
+  --colorPurple: #8400FF;
   --colorRed: #ff0303;
-
-  --panelColor: #92929200;
-
-
-  --buttonFontSize: 1.3rem;
-  --buttonRadius: 3px;
-  --buttonPadding: 15px 25px;
-
-  --buttonBgDark: #111;
-  --buttonTextColor: #ffffff;
-  --panelBorder: rgba(255,255,255,0.04);
-  --panelGradient: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  --shadowStrong: 0 6px 20px rgba(2,6,23,0.6);
-  --shadowSoft: 0 6px 18px rgba(2,6,23,0.6);
-
-  --accentColor: var(--colorBlueNeon);
+  --colorBackPanel: #00000094;
+  --colorTablaInformacion: #3b3636d1;
+  --colorRecurso: #0028FF;
+  --colorRecursoValor: #00FFF6;
+  --colorRecursoProgreso: #00FF28;
+  --colorBorderInformacion: #FFFFFF;
+  --fontSizeButton: clamp(0.7rem, 1vw, 2rem);
+  --colorButtonFont: #FFFFFF;
+  --rarityCommon: #aaaaaa;
+  --rarityUncommon: #4caf50;
+  --rarityRare: #2196f3;
+  --rarityEpic: #9c27b0;
+  --rarityLegendary: #ff9800;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
+/* ==================== CLASES GENERALES ==================== */
 html, body, #root {
   font-family: var(--fontFamily);
   color: var(--fontColor);
-  background: var(--background);
-
   height: 100%;
   margin: 0;
   padding: 0;
 }
 
-.appCenter {
+h1 {
+  font-size: 3rem;
+  text-shadow: -1px -1px 0 var(--colorH1Line),
+               1px -1px 0 var(--colorH1Line),
+               -1px 1px 0 var(--colorH1Line),
+               1px 1px 0 var(--colorH1Line),
+               0 0 10px var(--colorH1Line);
+}
+
+h2 {
+  font-size: 1.5rem;
+  color: var(--colorH2);
+  text-shadow: -1px -1px 0 var(--colorH2Line),
+               1px -1px 0 var(--colorH2Line),
+               -1px 1px 0 var(--colorH2Line),
+               1px 1px 0 var(--colorH2Line),
+               0 0 10px var(--colorH2Line);
+}
+
+button {
+  width: var(--buttonWidth);
+  height: var(--buttonHeight);
+  font-size: var(--fontSizeButton);
+  font-family: var(--fontFamily);
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--colorButtonFont);
+  border: 4px solid var(--colorFont);
+  cursor: crosshair;
+  border-radius: var(--radiusButton);
+  padding: var(--paddingButton);
+  margin-block: 1vh;
+  transition: all 0.1s ease;
+  text-shadow: -1px -1px 0 #000,
+               1px -1px 0 #000,
+               -1px 1px 0 #000,
+               1px 1px 0 #000;
+}
+
+button:hover {
+  transform: translate(-2px, -2px);
+  filter: brightness(1.7);
+}
+
+input {
+  width: 30vw;
+  height: 7vh;
+  font-size: 1.4rem;
+  font-family: var(--fontFamily);
+  text-align: center;
+  color: var(--colorFont);
+  background: #000000aa;
+  border: 4px solid var(--colorFont);
+  border-radius: 999px;
+  outline: none;
+  margin: 1vh 0;
+  text-shadow: -1px -1px 0 #000,
+               1px -1px 0 #000,
+               -1px 1px 0 #000,
+               1px 1px 0 #000;
+  transition: all 0.2s ease;
+}
+
+input:focus {
+  border-color: var(--colorBlueNeon);
+  box-shadow: 0 0 12px var(--colorBlueNeon);
+  filter: brightness(1.2);
+}
+
+input::placeholder {
+  color: #ffffff55;
+  text-shadow: none;
+}
+
+/* ==================== GENERAL ==================== */
+.backgroundPanel {
+  width: 75vw;
+  height: 80vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  padding: 32px;
+  text-align: center;
+  background: var(--colorBackPanel);
+  backdrop-filter: blur(1.4px);
+  border: none;
 }
 
-.panel {
-  background: var(--panelColor);
-  border: 1px solid var(--panelBorder);
-  padding: 24px;
-  border-radius: var(--buttonRadius);
-  backdrop-filter: blur(2px);
-  box-shadow: var(--shadowStrong);
-  color: inherit;
+.subTitle {
+  font-size: 0.8rem;
+  color: var(--colorSubtitle);
+  text-shadow: -1px -1px 0 var(--colorSubtitleLine),
+               1px -1px 0 var(--colorSubtitleLine),
+               -1px 1px 0 var(--colorSubtitleLine),
+               1px 1px 0 var(--colorSubtitleLine),
+               0 0 10px var(--colorSubtitleLine);
 }
 
-/* BOTONES */
-.btn {
-  font-weight: 700;
-  font-size: var(--buttonFontSize);
-  padding: var(--buttonPadding);
-  text-transform: uppercase;
-  color: var(--buttonTextColor);
-  background-color: var(--buttonBgDark);
+/* ==================== BOTONES COLORES ==================== */
+.buttonGreen { background: var(--colorGreen); }
+.buttonBlue { background: var(--colorBlue); }
+.buttonBlueNeon { background: var(--colorBlueNeon); }
+.buttonPurple { background: var(--colorPurple); }
+.buttonRed {
+  background: var(--colorRed);
+  width: calc(var(--buttonWidth) * 0.70);
+  height: calc(var(--buttonHeight) * 0.70);
+  font-size: calc(var(--fontSizeButton) * 0.8);
+}
+
+/* ==================== MENU ==================== */
+.menuTitle { text-align: center; }
+.menuDivbotones {
+  display: flex;
+  flex-direction: column;
+  gap: 3vh;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2vh;
+}
+
+/* ==================== COMO JUGAR ==================== */
+.comoDivVideo { display: flex; gap: 12px; align-items: center; }
+.buttonComoVideo {
+  font-weight: bold;
+  font-size: 1rem;
+  text-decoration: underline;
+  color: var(--colorBlueNeon);
+  background: none;
   border: none;
   cursor: pointer;
-  transition: all 0.15s ease;
-  border-radius: var(--buttonRadius);
+  transition: all 0.3s ease;
+  padding: 0;
+}
+.comoDivVolver { display: flex; align-items: center; justify-content: center; }
+
+/* ==================== MULTIJUGADOR MENU ==================== */
+.multijugadorMenuDivSalasBotones {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 0px 0.5vw;
+}
+.multijugadorMenuGap { gap: 3vh; }
+
+/* ==================== BUSCAR SALA MULTIJUGADOR ==================== */
+.buscarDivSecundario {
+  display: flex;
+  flex-direction: column;
+  width: 55vw;
+  text-align: center;
 }
 
-.btn:hover {
-  transform: translate(-2px, -2px);
-  box-shadow: 6px 6px 0 #000;
-  filter: brightness(1.2);
+/* ==================== CREAR SALA PRIVADA ==================== */
+.createDivCopy, .createDivWait {
+  display:flex;
+  flex-direction: row;
+  align-items: center;
+  text-align: center;
 }
 
-.btn:active {
-  transform: translate(2px, 2px);
-  box-shadow: 1px 1px 0 #000;
-  filter: brightness(0.9);
+/* ==================== SALA DE JUEGO ==================== */
+.jugarDivPrincipal {
+  display: flex;
+  height: 90vh;
+  width: 90vw;
+  background: var(--colorBackPanel);
+  backdrop-filter: blur(1.4px);
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1vh;
+  padding: 2vw;
 }
 
-.btn:disabled {
+.jugarDivDivision {
+  height: 90%;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2vw;
+}
+
+/* ==================== TABLA DE INFORMACION ==================== */
+.jugarTablaInformacion {
+  height: 90%;
+  width: 20%;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  justify-content: space-between;
+  border: 2px solid var(--colorBorderInformacion);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--colorTablaInformacion);
+  backdrop-filter: blur(6px);
+}
+
+.jugarTablaInformacion > * {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--colorBorderInformacion);
+  font-size: 1.1rem;
+}
+
+.jugarRecursoProgreso {
+  height: 1vh;
+  padding: 0;
+  border-radius: 999px;
+  background-color: var(--colorRecursoProgreso);
+  transition: width 0.3s ease;
+}
+
+.jugarRecursos {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.jugarRecursoNombre { color: var(--colorRecurso); font-weight: 600; }
+.jugarRecursoValor { color: var(--colorRecursoValor); font-weight: bold; }
+
+.jugarBottonesAcciones {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 1vw;
+}
+
+.jugarMazo {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 1vw;
+}
+
+/* ==================== VICTORIA ==================== */
+.jugarDivVictoria {
+  display: flex;
+  height: 60vh;
+  width: 90vw;
+  background: var(--colorBackPanel);
+  backdrop-filter: blur(1.4px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1vh;
+  padding: 2vw;
+}
+
+.jugarVictoriaAcciones {
+  display: flex;
+  gap: 2vw;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==================== TIENDA ==================== */
+.jugarTiendaDivPrincipal {
+  display: flex;
+  height: 90vh;
+  width: 90vw;
+  background: var(--colorBackPanel);
+  backdrop-filter: blur(1.4px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1vh;
+  padding: 2vw;
+}
+
+.jugarTiendaDivObjetos {
+  display: flex;
+  height: 70%;
+  flex-wrap: wrap;
+  gap: 2vw;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.jugarTiendaItem {
+  width: 14vw;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
+  padding: 1rem;
+  border-radius: 12px;
+  border: 2px solid var(--colorBorderInformacion);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  box-sizing: border-box;
+}
+
+.jugarTiendaItem:hover { transform: scale(1.04); }
+.jugarTiendaItem.purchased { opacity: 0.6; pointer-events: none; }
+
+.jugarTiendaEnhancementCard {
+  width: 10vw;
+  min-height: 14vh;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
+  border: 2px solid var(--colorBorderInformacion);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8rem;
+  gap: 0.6rem;
+  text-align: center;
+  transition: transform 0.15s ease;
+  box-sizing: border-box;
+}
+
+.jugarTiendaEnhancementCard:hover { transform: scale(1.03); }
+
+.jugarTiendaEnhancementEmoji { font-size: 1.8rem; }
+.jugarTiendaEnhancementName {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--colorRecurso);
+  text-align: center;
+  max-width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+.jugarTiendaEnhancementDescription {
+  font-size: 0.55rem;
+  color: var(--colorRecursoValor);
+  line-height: 1rem;
+  max-width: 90%;
+}
+
+.buttonBuy {
+  width: 9vw;
+  height: 4vh;
+  font-size: 0.6rem;
+  padding: 0.3rem;
+  border-width: 2px;
+  border-radius: 6px;
+  border-color: var(--colorFont);
+  cursor: pointer;
+  text-transform: uppercase;
+  color: var(--colorButtonFont);
+  background: var(--colorGreen);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+.buttonBuy:hover:not(:disabled) { transform: scale(1.03); }
+.buttonBuy:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.jugarTiendaAcciones {
+  display: flex;
+  gap: 2vw;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==================== JOKER ==================== */
+.jokerDivPrincipal { display: flex; flex-direction: column; gap: 0.5vh; }
+
+.jokerCard {
+  all: unset;
+  width: 95%;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
+  border: 3px solid;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2vh;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.jokerCard * { max-width: 100%; }
+.jokerCard:hover:not(:disabled) { transform: scale(1.03); }
+.jokerCard:disabled { opacity: 0.6; }
+
+.jokerCardSmall { width: 10vw; padding: 0.7rem; }
+.jokerCardMedium { width: 12vw; }
+.jokerCardLarge { width: 15vw; }
+
+/* CONTENIDO */
+.jokerEmoji { font-size: 2rem; width: 100%; border-radius: 6px; background: rgba(255,255,255,0.08); }
+.jokerName { font-size: 0.7rem; text-align: center; word-wrap: break-word; overflow-wrap: break-word; hyphens: auto; }
+.jokerDescription { font-size: 0.5rem; line-height: 1.1rem; word-wrap: break-word; overflow-wrap: break-word; hyphens: auto; max-width: 100%; }
+.jokerRarity { font-size: 0.5rem; }
+
+/* COSTOS */
+.jokerValue { font-size: 0.75rem; }
+.jokerCost { color: var(--colorGreen); }
+.jokerSell { color: var(--colorYellow); }
+
+/* RAREZAS DINÁMICAS */
+.jokerRaritycommon { border-color: var(--rarityCommon); }
+.jokerRarityuncommon { border-color: var(--rarityUncommon); }
+.jokerRarityrare { border-color: var(--rarityRare); }
+.jokerRarityepic { border-color: var(--rarityEpic); }
+.jokerRaritylegendary { border-color: var(--rarityLegendary); }
+
+/* ==================== DERROTA ==================== */
+.jugarDivDerrota {
+  display: flex;
+  height: 70vh;
+  width: 50vw;
+  background: var(--colorBackPanel);
+  backdrop-filter: blur(1.4px);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 1vh;
+  padding: 2vw;
+}
+
+/* ==================== MATCHROOM ==================== */
+.matchDivPanel {
+  display: flex;
+  height: 90vh;
+  width: 90vw;
+  background: var(--colorBackPanel);
+  backdrop-filter: blur(10px);
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  justify-content: center;
+  gap: 1vh;
+  padding: 2vw;
+}
+
+.tablaConsejos {
+  display: flex;
+  flex-direction: column;
+  height: 20%;
+  width: 50%;
+  border: 2px solid var(--colorRed);
+  border-radius: 15px;
+  justify-items: center;
+  justify-content: center;
+  text-justify: center;
+}
+
+/* Carta base */
+.card {
+  position: relative;
+  width: 90px;
+  height: 130px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  padding: 0;
+  font-family: var(--fontFamily);
+  background: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.card:hover:not(.card-disabled) {
+  transform: translateY(-10px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+.card:active:not(.card-disabled) {
+  transform: translateY(-5px);
+}
+
+.card-disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  filter: grayscale(0.5);
 }
 
-.btn:disabled:hover {
-  transform: none;
-  box-shadow: none;
-  filter: grayscale(0.5);
-}
-
-/* Variantes */
-.btnPrimary {
-  background: var(--colorBlueNeon);
-  color: var(--fontColor);
-}
-
-.btnSecondary {
-  background: var(--colorGreen);
-  color: var(--fontColor);
-}
-
-.btnDanger {
-  background: var(--colorRed);
-  color: var(--fontColor);
-}
-
-.btnNeutral {
-  background: var(--panelGradient);
-  border: 1px solid var(--panelBorder);
-  color: #e6eef8;
-}
-
-/* MENU */
-.menuRoot { 
-  display: flex; 
-  flex-direction: column; 
-  align-items: center; 
-  gap: 28px; 
-  width: 100%; 
-  max-width: 980px; 
-}
-
-.menuTitle { text-align: center; }
-
-.menuGrid { 
-  display: grid; 
-  grid-template-columns: repeat(2, 260px); 
-  gap: 18px; 
-  justify-content: center; 
-}
-
-/* Multijugador */
-.multiplayerRoot { 
-  display: flex; 
-  flex-direction: column; 
-  align-items: center; 
-  gap: 18px; 
-}
-
-.column { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 12px; 
-  align-items: center; 
-}
-
-/* Código de sala */
-.roomCode {
+/* Carta boca arriba */
+.card-face {
   display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 8px;
+  overflow: hidden;
+}
+
+/* Carta seleccionada */
+.card-selected {
+  transform: translateY(-15px);
+  box-shadow: 0 0 20px rgba(0, 255, 246, 0.8), 0 8px 16px rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--colorBlueNeon);
+}
+
+.card-selected-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 3px solid var(--colorBlueNeon);
+  border-radius: 8px;
+  pointer-events: none;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Esquinas de la carta */
+.card-corner {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  font-size: 46px;
   font-weight: 700;
-  letter-spacing: 8px;
-  padding: 26px 36px;
-  border-radius: 12px;
-  background: var(--panelGradient);
-  border: 1px solid var(--panelBorder);
-  color: var(--accentColor);
+  line-height: 1;
+  z-index: 1;
 }
 
-/* Inputs */
-.input {
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.06);
-  background: #ffffffdc;
-  color: #000000;
-  outline: none;
-  min-width: 260px;
+.card-corner-top {
+  align-self: flex-start;
 }
 
-.input:focus {
-  box-shadow: var(--shadowSoft);
-  border-color: var(--accentColor);
+.card-corner-bottom {
+  align-self: flex-end;
+  transform: rotate(180deg);
 }
 
-/* Utilidades */
-.row {
-  display: flex;
-  gap: 12px;
-  align-items: center;
+.card-rank {
+  font-size: 20px;
+  margin-bottom: 2px;
 }
 
-.center {
+.card-suit {
+  font-size: 18px;
+}
+
+/* Símbolo central grande */
+.card-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 48px;
+  opacity: 0.15;
+  z-index: 0;
+}
+
+.card-suit-large {
+  display: block;
+}
+
+/* Colores según el palo */
+.card-face[data-color="red"] .card-rank,
+.card-face[data-color="red"] .card-suit,
+.card-face[data-color="red"] .card-suit-large {
+  color: #d32f2f;
+}
+
+.card-face[data-color="black"] .card-rank,
+.card-face[data-color="black"] .card-suit,
+.card-face[data-color="black"] .card-suit-large {
+  color: #212121;
+}
+
+/* Carta boca abajo */
+.card-back {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
-.smallMuted {
-  font-size: 0.9rem;
-  color: rgba(255,255,255,0.6);
+.card-pattern {
+  width: 100%;
+  height: 100%;
+  background-image: 
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgba(255, 255, 255, 0.1) 10px,
+      rgba(255, 255, 255, 0.1) 20px
+    );
 }
 
-.linkLike {
-  color: var(--accentColor);
-  cursor: pointer;
-  text-decoration: underline;
+/* Mejoras/Enhancements */
+.card-enhancement {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: 2px solid;
 }
 
-.linkLike:hover {
-  filter: brightness(1.2);
+.card-enhancement[data-enhancement="bonus"] {
+  border-color: #4caf50;
+  color: #4caf50;
 }
 
-.textOutlined {
-  text-shadow:
-    -2px -2px 0 #000,
-     2px -2px 0 #000,
-    -2px  2px 0 #000,
-     2px  2px 0 #000,
-    -2px  0   0 #000,
-     2px  0   0 #000,
-     0   -2px 0 #000,
-     0    2px 0 #000;
+.card-enhancement[data-enhancement="mult"] {
+  border-color: #f44336;
+  color: #f44336;
+}
+
+.card-enhancement[data-enhancement="wild"] {
+  border-color: #9c27b0;
+  color: #9c27b0;
+}
+
+.card-enhancement[data-enhancement="glass"] {
+  border-color: #00bcd4;
+  color: #00bcd4;
+}
+
+.card-enhancement[data-enhancement="steel"] {
+  border-color: #607d8b;
+  color: #607d8b;
+}
+
+.card-enhancement[data-enhancement="stone"] {
+  border-color: #795548;
+  color: #795548;
+}
+
+.card-enhancement[data-enhancement="gold"] {
+  border-color: #ffd700;
+  color: #ffd700;
+}
+
+.card-enhancement[data-enhancement="lucky"] {
+  border-color: #8bc34a;
+  color: #8bc34a;
+}
+
+/* Efectos de Edición */
+.card-edition-effect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Foil - Efecto metálico con brillo */
+.card-edition-foil {
+  position: relative;
+  border: 2px solid rgba(192, 192, 192, 0.8);
+  box-shadow: 0 4px 8px rgba(192, 192, 192, 0.4);
+}
+
+.card-edition-effect-foil {
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 70%
+  );
+  animation: foil-shine 3s linear infinite;
+}
+
+@keyframes foil-shine {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Holographic - Efecto arcoíris */
+.card-edition-holographic {
+  position: relative;
+  border: 2px solid rgba(138, 43, 226, 0.8);
+  box-shadow: 0 4px 8px rgba(138, 43, 226, 0.4), 0 0 20px rgba(138, 43, 226, 0.3);
+}
+
+.card-edition-effect-holographic {
+  background: linear-gradient(
+    45deg,
+    rgba(255, 0, 0, 0.2),
+    rgba(255, 154, 0, 0.2),
+    rgba(208, 222, 33, 0.2),
+    rgba(79, 220, 74, 0.2),
+    rgba(63, 218, 216, 0.2),
+    rgba(47, 201, 226, 0.2),
+    rgba(28, 127, 238, 0.2),
+    rgba(95, 21, 242, 0.2),
+    rgba(186, 12, 248, 0.2),
+    rgba(251, 7, 217, 0.2)
+  );
+  background-size: 300% 300%;
+  animation: holographic-shift 4s ease infinite;
+}
+
+@keyframes holographic-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Polychrome - Efecto multicolor brillante */
+.card-edition-polychrome {
+  position: relative;
+  border: 2px solid rgba(255, 215, 0, 0.8);
+  box-shadow: 0 4px 8px rgba(255, 215, 0, 0.4), 0 0 20px rgba(255, 0, 255, 0.3);
+}
+
+.card-edition-effect-polychrome {
+  background: 
+    radial-gradient(circle at 20% 50%, rgba(255, 0, 255, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 50%, rgba(0, 255, 255, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 50% 20%, rgba(255, 255, 0, 0.3) 0%, transparent 50%);
+  animation: polychrome-pulse 2s ease-in-out infinite;
+}
+
+@keyframes polychrome-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .card {
+    width: 70px;
+    height: 100px;
+  }
+  
+  .card-rank {
+    font-size: 16px;
+  }
+  
+  .card-suit {
+    font-size: 14px;
+  }
+  
+  .card-center {
+    font-size: 36px;
+  }
 }

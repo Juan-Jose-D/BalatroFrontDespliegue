@@ -2,7 +2,6 @@ import { useState } from 'react'
 import type { ShopItem } from '../types/shop'
 import { generateShopItems, calculateRerollCost } from '../utils/shopLogic'
 import JokerCard from './game/JokerCard'
-import './Shop.css'
 
 interface ShopProps {
   ante: number
@@ -16,14 +15,14 @@ export default function Shop({ ante, money, onBuyItem, onReroll, onSkip }: Reado
   const [items, setItems] = useState<ShopItem[]>(() => generateShopItems(ante))
   const [rerollCount, setRerollCount] = useState(0)
   const [purchasedItems, setPurchasedItems] = useState<Set<string>>(new Set())
-  
+
   const rerollCost = calculateRerollCost(rerollCount)
   const canAffordReroll = money >= rerollCost
 
   const handleBuyItem = (item: ShopItem) => {
     if (purchasedItems.has(item.id)) return
     if (money < item.cost) return
-    
+
     const success = onBuyItem(item)
     if (success) {
       setPurchasedItems(prev => new Set(prev).add(item.id))
@@ -32,7 +31,7 @@ export default function Shop({ ante, money, onBuyItem, onReroll, onSkip }: Reado
 
   const handleReroll = () => {
     if (!canAffordReroll) return
-    
+
     const success = onReroll(rerollCost)
     if (success) {
       setItems(generateShopItems(ante))
@@ -42,44 +41,50 @@ export default function Shop({ ante, money, onBuyItem, onReroll, onSkip }: Reado
   }
 
   return (
-    <div className="shop">
-      <div className="shop-header">
-        <h2>🛒 Tienda</h2>
-        <div className="shop-money">💰 ${money}</div>
-      </div>
+    <div className="jugarTiendaDivPrincipal">
+      <h1>Tienda</h1>
+      <h2>${money}</h2>
 
-      <div className="shop-items">
+
+      <div className="jugarTiendaDivObjetos">
         {items.map(item => {
           const isPurchased = purchasedItems.has(item.id)
           const canAfford = money >= item.cost
-          
+
           if (item.type === 'joker' && item.joker) {
             const jokerInstance = { ...item.joker, instanceId: item.id }
+
             return (
-              <div key={item.id} className={`shop-item ${isPurchased ? 'purchased' : ''}`}>
-                <JokerCard joker={jokerInstance} size="medium" />
-                <button
-                  className="buy-button"
+              <div key={item.id} className={`jugarTiendaItem ${isPurchased ? 'purchased' : ''}`}>
+                <JokerCard joker={jokerInstance} size="small" />
+
+              <button
+                  className="buttonBuy"
                   onClick={() => handleBuyItem(item)}
                   disabled={isPurchased || !canAfford}
                 >
                   {isPurchased ? '✓ Comprado' : `Comprar $${item.cost}`}
-                </button>
+                </button>  
               </div>
+              
             )
           }
-          
+
           if (item.type === 'card_enhancement' && item.enhancement) {
             const { enhancement } = item
+
             return (
-              <div key={item.id} className={`shop-item ${isPurchased ? 'purchased' : ''}`}>
-                <div className="enhancement-card">
-                  <div className="enhancement-emoji">✨</div>
-                  <div className="enhancement-name">{enhancement.name}</div>
-                  <div className="enhancement-description">{enhancement.description}</div>
+              <div key={item.id} className={`jugarTiendaItem ${isPurchased ? 'purchased' : ''}`}>
+                <div className="jugarTiendaEnhancementCard">
+                  <div className="jugarTiendaEnhancementEmoji">✨</div>
+                  <div className="jugarTiendaEnhancementName">{enhancement.name}</div>
+                  <div className="jugarTiendaEnhancementDescription">
+                    {enhancement.description}
+                  </div>
                 </div>
+
                 <button
-                  className="buy-button"
+                  className="buttonBuy"
                   onClick={() => handleBuyItem(item)}
                   disabled={isPurchased || !canAfford}
                 >
@@ -88,21 +93,23 @@ export default function Shop({ ante, money, onBuyItem, onReroll, onSkip }: Reado
               </div>
             )
           }
-          
+
           return null
         })}
       </div>
 
-      <div className="shop-actions">
+
+      <div className="jugarTiendaAcciones">
         <button
-          className="reroll-button"
+          className="buttonBlue"
           onClick={handleReroll}
           disabled={!canAffordReroll}
         >
-          🔄 Reroll ${rerollCost}
+          Re-roll ${rerollCost}
         </button>
-        <button className="skip-button" onClick={onSkip}>
-          ⏭️ Continuar
+
+        <button className="buttonGreen" onClick={onSkip}>
+          Continuar
         </button>
       </div>
     </div>

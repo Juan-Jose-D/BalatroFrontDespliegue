@@ -3,22 +3,20 @@ import BackgroundWrapper from '../components/BackgroundWrapper'
 import Card from '../components/game/Card'
 import JokerCard from '../components/game/JokerCard'
 import Shop from '../components/Shop'
-import Button from '../components/Button'
 import FloatingNotification from '../components/FloatingNotification'
-import playBg from '../assets/backgrounds/play-bg.png'
 import { useGame } from '../context/GameContext'
 import { useNotifications } from '../hooks/useNotifications'
 import { POKER_HANDS } from '../types/poker'
-import { getRandomJoker } from '../data/jokers'
-import { createJokerInstance } from '../utils/jokerEffects'
-import { calculateInterest } from '../utils/shopLogic'
 import { calculateAllCardEffects } from '../utils/cardEnhancements'
+import { calculateInterest } from '../utils/shopLogic'
 import type { ShopItem } from '../types/shop'
+
+import background from '../assets/backgrounds/generalBackground.png'
 
 export default function PlayGame() {
   const [showShop, setShowShop] = useState(false)
   const { notifications, addNotification, removeNotification } = useNotifications()
-  
+
   const {
     gameState,
     selectCard,
@@ -39,421 +37,238 @@ export default function PlayGame() {
     selectedCards
   } = useGame()
 
-  // Detectar efectos de cartas al jugar
+  // -----------------------
+  // NOTIFICACIONES AUTOMÁTICAS
+  // -----------------------
   useEffect(() => {
-    if (selectedCards.length > 0) {
-      const effects = calculateAllCardEffects(selectedCards)
-      
-      // Mostrar notificación de dinero ganado (Gold cards)
-      if (effects.totalMoney > 0) {
-        addNotification(`+$${effects.totalMoney} de cartas Gold!`, 'gold', 2500)
-      }
-      
-      // Mostrar notificación de cartas rotas (Glass cards)
-      if (effects.brokenCards.length > 0) {
-        const cardNames = effects.brokenCards.map(c => c.rank).join(', ')
-        addNotification(`💥 ${cardNames} se rompió!`, 'glass', 2500)
-      }
+    if (selectedCards.length === 0) return
+
+    const effects = calculateAllCardEffects(selectedCards)
+
+    if (effects.totalMoney > 0) {
+      addNotification(`+$${effects.totalMoney} de cartas Gold!`, 'gold', 2500)
     }
-  }, [gameState.currentRound.score]) // Se ejecuta cuando cambia el score (después de jugar)
 
-  const getBlindColor = () => {
-    switch (gameState.blind) {
-      case 'small': return 'var(--colorBlue)'
-      case 'big': return 'var(--colorGreen)'
-      case 'boss': return 'var(--colorRed)'
-      default: return 'var(--colorBlueNeon)'
+    if (effects.brokenCards.length > 0) {
+      const cardNames = effects.brokenCards.map(c => c.rank).join(', ')
+      addNotification(`💥 ${cardNames} se rompió!`, 'glass', 2500)
     }
-  }
+  }, [gameState.currentRound.score])
 
-  // Función para añadir Joker de prueba
-  const handleAddTestJoker = () => {
-    const randomJoker = getRandomJoker()
-    const jokerInstance = createJokerInstance(randomJoker as any)
-    const added = addJoker(jokerInstance)
-    if (!added) {
-      alert('No hay espacio para más Jokers (máximo 5)')
-    }
-  }
-
-  // Función para probar ediciones en cartas
-  const handleTestEdition = () => {
-    if (gameState.hand.length === 0) return
-    
-    const editions: Array<'foil' | 'holographic' | 'polychrome'> = ['foil', 'holographic', 'polychrome']
-    const randomEdition = editions[Math.floor(Math.random() * editions.length)]
-    const randomCard = gameState.hand[Math.floor(Math.random() * gameState.hand.length)]
-    
-    applyEditionToCard(randomCard.id, randomEdition)
-    alert(`Edición ${randomEdition} aplicada a ${randomCard.rank}${randomCard.suit}`)
-  }
-
-  // Función para probar mejoras en cartas
-  const handleTestEnhancement = () => {
-    if (gameState.hand.length === 0) return
-    
-    const enhancements: Array<'bonus' | 'mult' | 'wild' | 'glass' | 'steel' | 'stone' | 'gold' | 'lucky'> = 
-      ['bonus', 'mult', 'wild', 'glass', 'steel', 'stone', 'gold', 'lucky']
-    const randomEnhancement = enhancements[Math.floor(Math.random() * enhancements.length)]
-    const randomCard = gameState.hand[Math.floor(Math.random() * gameState.hand.length)]
-    
-    applyEnhancementToCard(randomCard.id, randomEnhancement)
-    alert(`Mejora ${randomEnhancement} aplicada a ${randomCard.rank}${randomCard.suit}`)
-  }
-
-  // Pantalla de victoria - Muestra tienda
+  // -----------------------
+  // PANTALLA: VICTORIA
+  // -----------------------
   if (gameState.gameStatus === 'won') {
     const interest = calculateInterest(gameState.money)
-    
+
     if (showShop) {
-      const handleBuyItem = (item: ShopItem): boolean => {
-        return buyShopItem(item)
-      }
-
-      const handleReroll = (cost: number): boolean => {
-        return rerollShop(cost)
-      }
-
-      const handleSkipShop = () => {
-        setShowShop(false)
-        advanceRound()
-      }
-
       return (
-        <BackgroundWrapper image={playBg}>
+        <BackgroundWrapper image={background}>
           <Shop
             ante={gameState.ante}
             money={gameState.money}
-            onBuyItem={handleBuyItem}
-            onReroll={handleReroll}
-            onSkip={handleSkipShop}
+            onBuyItem={(item: ShopItem) => buyShopItem(item)}
+            onReroll={(cost: number) => rerollShop(cost)}
+            onSkip={() => {
+              setShowShop(false)
+              advanceRound()
+            }}
           />
         </BackgroundWrapper>
       )
     }
-    
+
     return (
-      <BackgroundWrapper image={playBg}>
-        <div className="panel" style={{ 
-          padding: '40px',
-          textAlign: 'center',
-          maxWidth: '600px'
-        }}>
-          <h1 style={{ 
-            fontSize: '3rem', 
-            color: 'var(--colorGreen)',
-            marginBottom: '20px'
-          }}>
-            ¡VICTORIA!
-          </h1>
-          <h2 style={{ fontSize: '1.8rem', marginBottom: '20px' }}>
-            {blindInfo.name} Completado
-          </h2>
-          <div style={{ fontSize: '1.2rem', marginBottom: '30px' }}>
-            <div>Puntuación: {gameState.currentRound.score} / {blindInfo.scoreNeeded}</div>
-            <div>Recompensa: +${blindInfo.reward}</div>
-            <div>Interés: +${interest}</div>
-            <div>Dinero Total: ${gameState.money + interest}</div>
+      <BackgroundWrapper image={background}>
+        <div className="jugarDivVictoria">
+          <h1>¡VICTORIA!</h1>
+          <h2>{blindInfo.name} Completado</h2>
+
+          <div className="victory-info">
+            {[
+              ['Puntuación:', `${gameState.currentRound.score} / ${blindInfo.scoreNeeded}`],
+              ['Recompensa:', `+$${blindInfo.reward}`],
+              ['Interés:', `+$${interest}`],
+              ['Dinero Total:', `$${gameState.money + interest}`],
+            ].map(([label, value]) => (
+              <div key={label} className="jugarRecursos">
+                <p className="jugarRecursoNombre">{label}</p>
+                <p className="jugarRecursoValor">{value}</p>
+              </div>
+            ))}
           </div>
-          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
-            <Button variant="primary" onClick={() => setShowShop(true)}>
-              Ir a la Tienda
-            </Button>
-            <Button variant="neutral" onClick={restartGame}>
-              Reiniciar Juego
-            </Button>
+
+          <div className="jugarVictoriaAcciones">
+            <button className="buttonRed" onClick={restartGame}>Reiniciar Juego</button>
+            <button className="buttonBlue" onClick={() => setShowShop(true)}>Ir a la Tienda</button>
           </div>
         </div>
       </BackgroundWrapper>
     )
   }
 
-  // Pantalla de derrota
+  // -----------------------
+  // PANTALLA: DERROTA
+  // -----------------------
   if (gameState.gameStatus === 'lost') {
     return (
-      <BackgroundWrapper image={playBg}>
-        <div className="panel" style={{ 
-          padding: '40px',
-          textAlign: 'center',
-          maxWidth: '600px'
-        }}>
-          <h1 style={{ 
-            fontSize: '3rem', 
-            color: 'var(--colorRed)',
-            marginBottom: '20px'
-          }}>
-            GAME OVER
-          </h1>
-          <h2 style={{ fontSize: '1.8rem', marginBottom: '20px' }}>
-            Te quedaste sin manos
-          </h2>
-          <div style={{ fontSize: '1.2rem', marginBottom: '30px' }}>
-            <div>Puntuación: {gameState.currentRound.score} / {blindInfo.scoreNeeded}</div>
-            <div>Faltaban: {blindInfo.scoreRemaining} puntos</div>
-            <div>Ante alcanzado: {gameState.ante}</div>
+      <BackgroundWrapper image={background}>
+        <div className="jugarDivDerrota">
+          <h1>GAME OVER</h1>
+          <h2>Te quedaste sin manos</h2>
+
+          <div className="jugarRecursos">
+            <p className="jugarRecursoNombre">Puntuación:</p>
+            <p className="jugarRecursoValor">{gameState.currentRound.score} / {blindInfo.scoreNeeded}</p>
           </div>
-          <Button variant="primary" onClick={restartGame}>
+
+          <div className="jugarRecursos">
+            <p className="jugarRecursoNombre">Faltaban:</p>
+            <p className="jugarRecursoValor">{blindInfo.scoreRemaining} puntos</p>
+          </div>
+
+          <div className="jugarRecursos">
+            <p className="jugarRecursoNombre">Ante alcanzado:</p>
+            <p className="jugarRecursoValor">{gameState.ante}</p>
+          </div>
+
+          <button className="buttonGreen" onClick={restartGame}>
             Intentar de Nuevo
-          </Button>
+          </button>
         </div>
       </BackgroundWrapper>
     )
   }
 
+  // -----------------------
+  // PANTALLA: JUEGO NORMAL
+  // -----------------------
   return (
-    <BackgroundWrapper image={playBg}>
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '20px',
-          padding: '20px',
-          width: '100%',
-          maxWidth: '1400px',
-        }}
-      >
-        {/* Header con Ante y Blind */}
-        <div style={{ textAlign: 'center', color: 'var(--fontColor)' }}>
-          <h1 style={{ 
-            fontSize: '2.5rem', 
-            margin: '0',
-            textShadow: '3px 3px #000'
-          }}>
-            Ante {gameState.ante} - {blindInfo.name}
-          </h1>
-        </div>
+    <BackgroundWrapper image={background}>
+      <div className="jugarDivPrincipal">
 
-        {/* Información de la ronda */}
-        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
-          {/* Panel de objetivo */}
-          <div className="panel" style={{ 
-            padding: '15px 25px',
-            minWidth: '200px',
-            textAlign: 'center',
-            border: `2px solid ${getBlindColor()}`
-          }}>
-            <div style={{ fontSize: '0.9rem', opacity: 0.8 }}>Objetivo</div>
-            <div style={{ 
-              fontSize: '2rem', 
-              fontWeight: 700,
-              color: getBlindColor()
-            }}>
+        {/* HEADER */}
+        <h1>Ante {gameState.ante} - {blindInfo.name}</h1>
+
+        <div className="jugarDivDivision">
+
+          {/* INFO */}
+          <div className="jugarTablaInformacion">
+            <div className="jugarRecursoNombre">Objetivo</div>
+            <div className="jugarRecursoValor">
               {gameState.currentRound.score} / {blindInfo.scoreNeeded}
             </div>
-            <div style={{ 
-              width: '100%', 
-              height: '8px', 
-              background: 'rgba(0,0,0,0.3)',
-              borderRadius: '4px',
-              marginTop: '10px',
-              overflow: 'hidden'
-            }}>
-              <div style={{ 
-                width: `${blindInfo.progress}%`,
-                height: '100%',
-                background: getBlindColor(),
-                transition: 'width 0.3s ease'
-              }} />
-            </div>
+
+            <div className="jugarRecursoProgreso" style={{ width: `${blindInfo.progress}%` }} />
+            <div className="jugarRecursoDivision" />
+
+            {[
+              ['Manos', gameState.currentRound.handsRemaining],
+              ['Descartes', gameState.currentRound.discardsRemaining],
+              ['Dinero', `$${gameState.money}`],
+            ].map(([label, value]) => (
+              <div key={label} className="jugarRecursos">
+                <div className="jugarRecursoNombre">{label}</div>
+                <div className="jugarRecursoValor">{value}</div>
+              </div>
+            ))}
           </div>
 
-          {/* Panel de recursos */}
-          <div className="panel" style={{ 
-            padding: '15px 25px',
-            display: 'flex',
-            gap: '30px'
-          }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.9rem', opacity: 0.8 }}>Manos</div>
-              <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--colorBlueNeon)' }}>
-                {gameState.currentRound.handsRemaining}
-              </div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.9rem', opacity: 0.8 }}>Descartes</div>
-              <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--colorRed)' }}>
-                {gameState.currentRound.discardsRemaining}
-              </div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.9rem', opacity: 0.8 }}>Dinero</div>
-              <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--colorGreen)' }}>
-                ${gameState.money}
-              </div>
-            </div>
-          </div>
-        </div>
+          {/* ZONA DE JUEGO */}
+          <div className="jugarZonaJuego">
 
-        {/* Info de la mano actual */}
-        <div className="panel" style={{ 
-          padding: '15px 30px',
-          fontSize: '1.5rem',
-          fontWeight: 700,
-          minWidth: '400px',
-          textAlign: 'center',
-          background: currentHandScore ? 'rgba(0, 255, 246, 0.1)' : 'var(--panelColor)'
-        }}>
-          {currentHandScore ? (
-            <>
-              {POKER_HANDS[currentHandScore.handType].name} - {' '}
-              <span style={{ color: 'var(--colorBlueNeon)' }}>
-                {currentHandScore.score} pts
-              </span>
-              {' '}({currentHandScore.chips} × {currentHandScore.multiplier})
-            </>
-          ) : (
-            'Selecciona hasta 5 cartas'
-          )}
-        </div>
-
-        {/* Panel de Jokers */}
-        {gameState.jokers.length > 0 && (
-          <div style={{ width: '100%', maxWidth: '900px' }}>
-            <div style={{ 
-              textAlign: 'center',
-              marginBottom: '10px',
-              fontSize: '1.2rem',
-              fontWeight: 700,
-              color: 'var(--colorBlueNeon)'
-            }}>
-              Jokers Activos ({gameState.jokers.length}/{gameState.maxJokers})
+            {/* INFO DE MANO */}
+            <div className={`panel handinfo-panel ${currentHandScore ? 'handinfo-active' : ''}`}>
+              {currentHandScore ? (
+                <>
+                  {POKER_HANDS[currentHandScore.handType].name} -
+                  <span className="handinfo-score">{currentHandScore.score} pts</span>
+                  ({currentHandScore.chips} × {currentHandScore.multiplier})
+                </>
+              ) : ' '}
             </div>
-            <div style={{
-              display: 'flex',
-              gap: '15px',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              padding: '15px',
-              background: 'rgba(0,0,0,0.3)',
-              borderRadius: '12px'
-            }}>
-              {gameState.jokers.map(joker => (
-                <div key={joker.instanceId} style={{ position: 'relative' }}>
-                  <JokerCard
-                    joker={joker}
-                    size="medium"
-                  />
-                  <button
-                    onClick={() => {
-                      const sellPrice = Math.floor(joker.cost / 2)
-                      if (globalThis.confirm(`¿Vender ${joker.name} por $${sellPrice}?`)) {
-                        sellJoker(joker.instanceId)
-                      }
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: '5px',
-                      right: '5px',
-                      background: 'rgba(255, 0, 0, 0.8)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '30px',
-                      height: '30px',
-                      cursor: 'pointer',
-                      fontSize: '1.2rem',
-                      fontWeight: 'bold',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    ✕
-                  </button>
+
+            {/* JOKERS */}
+            {gameState.jokers.length > 0 && (
+              <div className="jokers-section">
+                <div className="jokers-title">
+                  Jokers Activos ({gameState.jokers.length}/{gameState.maxJokers})
                 </div>
+
+                <div className="jokers-list">
+                  {gameState.jokers.map(joker => (
+                    <div key={joker.instanceId} className="joker-wrapper">
+                      <JokerCard joker={joker} size="medium" />
+
+                      <button
+                        className="joker-sell-btn"
+                        onClick={() => {
+                          const sellPrice = Math.floor(joker.cost / 2)
+                          if (confirm(`¿Vender ${joker.name} por $${sellPrice}?`)) {
+                            sellJoker(joker.instanceId)
+                          }
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* CARTAS */}
+            <div className="jugarMazo">
+              {gameState.hand.map(card => (
+                <Card key={card.id} card={card} onClick={() => selectCard(card.id)} />
               ))}
             </div>
           </div>
-        )}
-
-        {/* Cartas en mano */}
-        <div style={{
-          display: 'flex',
-          gap: '10px',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          padding: '20px',
-          background: 'rgba(0,0,0,0.3)',
-          borderRadius: '12px',
-          minHeight: '160px'
-        }}>
-          {gameState.hand.map(card => (
-            <Card
-              key={card.id}
-              card={card}
-              onClick={() => selectCard(card.id)}
-            />
-          ))}
         </div>
 
-        {/* Botones de acción */}
-        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <Button
-            variant="primary"
-            onClick={playSelectedHand}
-            disabled={!canPlay}
-          >
-            Jugar Mano ({gameState.currentRound.handsRemaining})
-          </Button>
-          
-          <Button
-            variant="secondary"
-            onClick={discardSelectedCards}
-            disabled={!canDiscard}
-          >
+        {/* ACCIONES */}
+        <div className="jugarBottonesAcciones">
+          {/*
+  <button
+    className="btn-secondary"
+    onClick={handleAddTestJoker}
+  >
+    + Joker (Test)
+  </button>
+
+  <button
+    className="btn-secondary"
+    onClick={handleTestEdition}
+  >
+    + Edición (Test)
+  </button>
+
+  <button
+    className="btn-secondary"
+    onClick={handleTestEnhancement}
+  >
+    + Mejora (Test)
+  </button>
+*/}
+
+          <button className="buttonBlue" onClick={discardSelectedCards} disabled={!canDiscard}>
             Descartar ({gameState.currentRound.discardsRemaining})
-          </Button>
-          
-          <Button
-            variant="secondary"
-            onClick={handleAddTestJoker}
-          >
-            + Joker (Test)
-          </Button>
-          
-          <Button
-            variant="secondary"
-            onClick={handleTestEdition}
-          >
-            + Edición (Test)
-          </Button>
-          
-          <Button
-            variant="secondary"
-            onClick={handleTestEnhancement}
-          >
-            + Mejora (Test)
-          </Button>
-          
-          <Button
-            variant="neutral"
-            onClick={restartGame}
-          >
-            Reiniciar
-          </Button>
+          </button>
+
+          <button className="buttonGreen" onClick={playSelectedHand} disabled={!canPlay}>
+            Jugar Mano ({gameState.currentRound.handsRemaining})
+          </button>
         </div>
 
-        {/* Info de ayuda */}
-        <div className="panel" style={{ 
-          padding: '12px 20px',
-          fontSize: '0.85rem',
-          maxWidth: '700px',
-          textAlign: 'center',
-          opacity: 0.9
-        }}>
-          <p style={{ margin: 0 }}>
-            <strong>Objetivo:</strong> Alcanza {blindInfo.scoreNeeded} puntos antes de quedarte sin manos. 
-            Selecciona cartas y juega tu mejor mano de poker.
-          </p>
-        </div>
+        <button className="buttonRed" onClick={restartGame}>Reiniciar</button>
+
       </div>
 
-      {/* Notificaciones flotantes */}
-      {notifications.map(notification => (
+      {/* NOTIFICACIONES */}
+      {notifications.map(n => (
         <FloatingNotification
-          key={notification.id}
-          notification={notification}
+          key={n.id}
+          notification={n}
           onRemove={removeNotification}
         />
       ))}

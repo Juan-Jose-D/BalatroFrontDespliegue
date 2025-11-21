@@ -1,63 +1,52 @@
-import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import BackgroundWrapper from '../components/BackgroundWrapper'
-import menuBg from '../assets/backgrounds/menu-bg.png'
-import Button from '../components/Button'
+import background from '../assets/backgrounds/generalBackground.png'
 
 export default function Menu() {
-  const nav = useNavigate()
+  const navigate = useNavigate()
 
   return (
-    <BackgroundWrapper image={menuBg}>
-      <div className="menuRoot">
+    <BackgroundWrapper image={background}>
+      <div className="backgroundPanel">
+
         <div className="menuTitle">
           <h1>Balatro</h1>
-          <p className="smallMuted">Cliente — demo</p>
+          <p className="subTitle">Cliente demo</p>
+          <p className="subTitle">Juan - Josue - Alejandro</p>
         </div>
 
-        <div className="menuGrid" style={{ marginTop: 8 }}>
-          <Button
-            variant="primary"
-            className="btn btnPrimary"
-            onClick={() => nav('/solo')}
-          >
-            Solitario
-          </Button>
-
-          <Button
-            variant="secondary"
-            className="btn btnSecondary"
-            onClick={() => nav('/multiplayer')}
+        <div className="menuDivbotones">
+          <button
+            className="buttonGreen"
+            onClick={() => navigate('/multiplayer')}
           >
             Multijugador
-          </Button>
+          </button>
 
-          <Button
-            variant="neutral"
-            className="btn btnNeutral"
-            onClick={() => nav('/howto')}
+          <button
+            className="buttonBlue"
+            onClick={() => navigate('/solo')}
           >
-            Cómo jugar
-          </Button>
+            Solitario
+          </button>
 
-          <Button
-            variant="neutral"
-            className="btn btnNeutral"
-            onClick={() => nav('/config')}
+          <button
+            className="buttonPurple"
+            onClick={() => navigate('/howto')}
           >
-            Configuración
-          </Button>
+            ¿Cómo jugar?
+          </button>
         </div>
 
-        <div style={{ marginTop: 14 }} className="center">
-          <Button
-            variant="danger"
-            className="btn btnDanger"
-            onClick={() => { /* window.close() */ }}
+        <div>
+          <button
+            className="buttonRed"
+            onClick={() => {}}
           >
             Salir
-          </Button>
+          </button>
         </div>
+
       </div>
     </BackgroundWrapper>
   )

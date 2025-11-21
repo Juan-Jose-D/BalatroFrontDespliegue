@@ -6,7 +6,7 @@ import JokerCard from '../components/game/JokerCard'
 import Shop from '../components/Shop'
 import Button from '../components/Button'
 import FloatingNotification from '../components/FloatingNotification'
-import playBg from '../assets/backgrounds/play-bg.png'
+import playBg from '../assets/backgrounds/generalBackground.png'
 import { useGameMultiplayer } from '../context/GameMultiplayerContext'
 import { useNotifications } from '../hooks/useNotifications'
 import { POKER_HANDS } from '../types/poker'
@@ -115,15 +115,6 @@ function PlayMultiplayerGame() {
     }
   }, [gameState.currentRound.score])
 
-  const getBlindColor = () => {
-    switch (gameState.blind) {
-      case 'small': return 'var(--colorBlue)'
-      case 'big': return 'var(--colorGreen)'
-      case 'boss': return 'var(--colorRed)'
-      default: return 'var(--colorBlueNeon)'
-    }
-  }
-
   const handleSendChat = () => {
     if (chatInput.trim()) {
       sendChatMessage(chatInput)
@@ -146,7 +137,9 @@ function PlayMultiplayerGame() {
     }
   }
 
-  // Pantalla de victoria - Muestra tienda
+  // -----------------------
+  // PANTALLA DE VICTORIA
+  // -----------------------
   if (gameState.gameStatus === 'won') {
     const interest = calculateInterest(gameState.money)
     
@@ -187,337 +180,213 @@ function PlayMultiplayerGame() {
     
     return (
       <BackgroundWrapper image={playBg}>
-        <div className="panel" style={{ 
-          padding: '40px',
-          textAlign: 'center',
-          maxWidth: '600px'
-        }}>
-          <h1 style={{ 
-            fontSize: '3rem', 
-            color: 'var(--colorGreen)',
-            marginBottom: '20px'
-          }}>
-            ¡VICTORIA!
-          </h1>
-          <h2 style={{ fontSize: '1.8rem', marginBottom: '20px' }}>
-            {blindInfo.name} Completado
-          </h2>
-          <div style={{ fontSize: '1.2rem', marginBottom: '30px' }}>
-            <div>Puntuación: {gameState.currentRound.score} / {blindInfo.scoreNeeded}</div>
-            <div>Recompensa: +${blindInfo.reward}</div>
-            <div>Interés: +${interest}</div>
-            <div>Dinero Total: ${gameState.money + interest}</div>
+        <div className="jugarDivVictoria">
+          <h1>¡VICTORIA!</h1>
+          <h2>{blindInfo.name} Completado</h2>
+
+          <div className="victory-info">
+            <div className='jugarRecursos'>
+              <p className="jugarRecursoNombre">Puntuación:</p>
+              <p className="jugarRecursoValor">{gameState.currentRound.score} / {blindInfo.scoreNeeded}</p>
+            </div>
+            <div className='jugarRecursos'>
+              <p className="jugarRecursoNombre">Recompensa:</p>
+              <p className="jugarRecursoValor">+${blindInfo.reward}</p>
+            </div>
+            <div className='jugarRecursos'>
+              <p className="jugarRecursoNombre">Interés:</p>
+              <p className="jugarRecursoValor">+${interest}</p>
+            </div>
+            <div className='jugarRecursos'>
+              <p className="jugarRecursoNombre">Dinero Total:</p>
+              <p className="jugarRecursoValor">${gameState.money + interest}</p>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Button variant="primary" onClick={() => setShowShop(true)}>
+
+          <div className="jugarVictoriaAcciones">
+             <button className="buttonRed" onClick={handleExit}>
+              Salir
+            </button>
+
+            <button className="buttonBlue" onClick={() => setShowShop(true)}>
               Ir a la Tienda
-            </Button>
-            <Button variant="neutral" onClick={handleExit}>
-              Salir de la Partida
-            </Button>
+            </button>
           </div>
         </div>
       </BackgroundWrapper>
     )
   }
 
-  // Pantalla de derrota
+  // -----------------------
+  // PANTALLA DE DERROTA
+  // -----------------------
   if (gameState.gameStatus === 'lost') {
     return (
       <BackgroundWrapper image={playBg}>
-        <div className="panel" style={{ 
-          padding: '40px',
-          textAlign: 'center',
-          maxWidth: '600px'
-        }}>
-          <h1 style={{ 
-            fontSize: '3rem', 
-            color: 'var(--colorRed)',
-            marginBottom: '20px'
-          }}>
-            GAME OVER
-          </h1>
-          <h2 style={{ fontSize: '1.8rem', marginBottom: '20px' }}>
-            Te quedaste sin manos
-          </h2>
-          <div style={{ fontSize: '1.2rem', marginBottom: '30px' }}>
-            <div>Puntuación: {gameState.currentRound.score} / {blindInfo.scoreNeeded}</div>
-            <div>Faltaban: {blindInfo.scoreRemaining} puntos</div>
-            <div>Ante alcanzado: {gameState.ante}</div>
+        <div className='jugarDivDerrota'>
+          <h1>GAME OVER</h1>
+          <h2>Te quedaste sin manos</h2>
+          
+          <div className='jugarRecursos'>
+            <p className="jugarRecursoNombre">Puntuación:</p>
+            <p className="jugarRecursoValor">{gameState.currentRound.score} / {blindInfo.scoreNeeded}</p>
           </div>
-          <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
-            <Button variant="neutral" onClick={handleExit}>
-              Salir de la Partida
-            </Button>
+          <div className='jugarRecursos'>
+            <p className="jugarRecursoNombre">Faltaban:</p>
+            <p className="jugarRecursoValor">{blindInfo.scoreRemaining} puntos</p>
           </div>
+          <div className='jugarRecursos'>
+            <p className="jugarRecursoNombre">Ante alcanzado: </p>
+            <p className="jugarRecursoValor">{gameState.ante}</p>
+          </div>
+
+          <button className="buttonGreen" onClick={handleExit}>
+            Salir
+          </button>
         </div>
       </BackgroundWrapper>
     )
   }
 
+  // -----------------------
+  // JUEGO NORMAL MULTIJUGADOR
+  // -----------------------
   return (
     <BackgroundWrapper image={playBg}>
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '20px',
-          padding: '20px',
-          width: '100%',
-          maxWidth: '1400px',
-        }}
-      >
-        {/* Header con modo multijugador */}
-        <div style={{ textAlign: 'center', color: 'var(--fontColor)' }}>
-          <div style={{ 
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '10px',
-            fontSize: '1rem',
-            marginBottom: '5px'
-          }}>
-            <span>🎮 Partida Multijugador</span>
-            <span style={{
-              width: '10px',
-              height: '10px',
-              borderRadius: '50%',
-              backgroundColor: isConnected ? '#10b981' : '#ef4444',
-              display: 'inline-block',
-              animation: isConnected ? 'none' : 'pulse 2s infinite'
-            }} />
-            <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>
-              {isConnected ? '🟢 Conectado' : '🔴 Desconectado'}
-            </span>
-          </div>
-          <h1 style={{ 
-            fontSize: '2.5rem', 
-            margin: '0',
-            textShadow: '3px 3px #000'
-          }}>
-            Ante {gameState.ante} - {blindInfo.name}
-          </h1>
-        </div>
+      <div className="jugarDivPrincipal">
 
-        {/* Información de ambos jugadores */}
-        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
-          {/* Panel del jugador */}
-          <div className="panel" style={{ 
-            flex: 1,
-            minWidth: '300px',
-            padding: '15px',
-            border: '2px solid var(--colorBlueNeon)'
-          }}>
-            <div style={{ textAlign: 'center', marginBottom: '10px', fontWeight: 700 }}>
-              TÚ
+        {/* HEADER */}
+        <h1>
+          Ante {gameState.ante} - {blindInfo.name}
+          <span>
+            {isConnected ? '🟢' : '🔴'}
+          </span>
+        </h1>
+
+        <div className='jugarDivDivision'>
+          
+          {/* IZQUIERDA: JUGADOR (TÚ) */}
+          <div className='jugarTablaInformacion'>
+            <div className="jugarRecursoNombre">TÚ</div>
+            
+            <div className="jugarRecursoNombre">Objetivo</div>
+            <div className="jugarRecursoValor">{gameState.currentRound.score} / {blindInfo.scoreNeeded}</div>
+            <div className="jugarRecursoProgreso" style={{ width: `${blindInfo.progress}%` }}></div>
+            <div className='jugarRecursoDivision'></div>
+
+            <div className='jugarRecursos'>
+              <div className="jugarRecursoNombre">Manos</div>
+              <div className="jugarRecursoValor">{gameState.currentRound.handsRemaining}</div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-around', gap: '10px' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Score</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: getBlindColor() }}>
-                  {gameState.currentRound.score}
-                </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Manos</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--colorBlueNeon)' }}>
-                  {gameState.currentRound.handsRemaining}
-                </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Descartes</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--colorRed)' }}>
-                  {gameState.currentRound.discardsRemaining}
-                </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Dinero</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--colorGreen)' }}>
-                  ${gameState.money}
-                </div>
-              </div>
+
+            <div className='jugarRecursos'>
+              <div className="jugarRecursoNombre">Descartes</div>
+              <div className="jugarRecursoValor">{gameState.currentRound.discardsRemaining}</div>
+            </div>
+
+            <div className='jugarRecursos'>
+              <div className="jugarRecursoNombre">Dinero</div>
+              <div className="jugarRecursoValor">${gameState.money}</div>
             </div>
           </div>
 
-          {/* Panel del objetivo */}
-          <div className="panel" style={{ 
-            padding: '15px 25px',
-            minWidth: '200px',
-            textAlign: 'center',
-            border: `2px solid ${getBlindColor()}`
-          }}>
-            <div style={{ fontSize: '0.9rem', opacity: 0.8 }}>Objetivo</div>
-            <div style={{ 
-              fontSize: '2rem', 
-              fontWeight: 700,
-              color: getBlindColor()
-            }}>
-              {blindInfo.scoreNeeded}
+          {/* CENTRO: ZONA DE JUEGO */}
+          <div className='jugarZonaJuego'>
+            
+            {/* INFO DE MANO */}
+            <div className={`panel handinfo-panel ${currentHandScore ? 'handinfo-active' : ''}`}>
+              {currentHandScore ? (
+                <>
+                  {POKER_HANDS[currentHandScore.handType].name} -
+                  <span className="handinfo-score">{currentHandScore.score} pts</span>
+                  ({currentHandScore.chips} × {currentHandScore.multiplier})
+                </>
+              ) : (
+                'Selecciona cartas'
+              )}
             </div>
-            <div style={{ 
-              width: '100%', 
-              height: '8px', 
-              background: 'rgba(0,0,0,0.3)',
-              borderRadius: '4px',
-              marginTop: '10px',
-              overflow: 'hidden'
-            }}>
-              <div style={{ 
-                width: `${blindInfo.progress}%`,
-                height: '100%',
-                background: getBlindColor(),
-                transition: 'width 0.3s ease'
-              }} />
-            </div>
-          </div>
 
-          {/* Panel del oponente */}
-          <div className="panel" style={{ 
-            flex: 1,
-            minWidth: '300px',
-            padding: '15px',
-            border: '2px solid var(--colorRed)'
-          }}>
-            <div style={{ textAlign: 'center', marginBottom: '10px', fontWeight: 700 }}>
-              {opponentName}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-around', gap: '10px' }}>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Score</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: getBlindColor() }}>
-                  {opponentScore}
+            {/* JOKERS */}
+            {gameState.jokers.length > 0 && (
+              <div className="jokers-section">
+                <div className="jokers-title">
+                  Jokers ({gameState.jokers.length}/{gameState.maxJokers})
+                </div>
+                <div className="jokers-list">
+                  {gameState.jokers.map(joker => (
+                    <div key={joker.instanceId} className="joker-wrapper">
+                      <JokerCard joker={joker} size="medium" />
+                      <button
+                        className="joker-sell-btn"
+                        onClick={() => {
+                          const sellPrice = Math.floor(joker.cost / 2)
+                          if (confirm(`¿Vender ${joker.name} por $${sellPrice}?`)) {
+                            sellJoker(joker.instanceId)
+                          }
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Manos</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--colorBlueNeon)' }}>
-                  {opponentHands}
-                </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Descartes</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--colorRed)' }}>
-                  {opponentDiscards}
-                </div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Dinero</div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--colorGreen)' }}>
-                  ${opponentMoney}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+            )}
 
-        {/* Info de la mano actual */}
-        <div className="panel" style={{ 
-          padding: '15px 30px',
-          fontSize: '1.5rem',
-          fontWeight: 700,
-          minWidth: '400px',
-          textAlign: 'center',
-          background: currentHandScore ? 'rgba(0, 255, 246, 0.1)' : 'var(--panelColor)'
-        }}>
-          {currentHandScore ? (
-            <>
-              {POKER_HANDS[currentHandScore.handType].name} - {' '}
-              <span style={{ color: 'var(--colorBlueNeon)' }}>
-                {currentHandScore.score} pts
-              </span>
-              {' '}({currentHandScore.chips} × {currentHandScore.multiplier})
-            </>
-          ) : (
-            'Selecciona hasta 5 cartas'
-          )}
-        </div>
-
-        {/* Panel de Jokers */}
-        {gameState.jokers.length > 0 && (
-          <div style={{ width: '100%', maxWidth: '900px' }}>
-            <div style={{ 
-              textAlign: 'center',
-              marginBottom: '10px',
-              fontSize: '1.2rem',
-              fontWeight: 700,
-              color: 'var(--colorBlueNeon)'
-            }}>
-              Jokers Activos ({gameState.jokers.length}/{gameState.maxJokers})
-            </div>
-            <div style={{
-              display: 'flex',
-              gap: '15px',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              padding: '15px',
-              background: 'rgba(0,0,0,0.3)',
-              borderRadius: '12px'
-            }}>
-              {gameState.jokers.map(joker => (
-                <div key={joker.instanceId} style={{ position: 'relative' }}>
-                  <JokerCard
-                    joker={joker}
-                    size="medium"
-                  />
-                  <button
-                    onClick={() => {
-                      const sellPrice = Math.floor(joker.cost / 2)
-                      if (globalThis.confirm(`¿Vender ${joker.name} por $${sellPrice}?`)) {
-                        sellJoker(joker.instanceId)
-                      }
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: '5px',
-                      right: '5px',
-                      background: 'rgba(255, 0, 0, 0.8)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '30px',
-                      height: '30px',
-                      cursor: 'pointer',
-                      fontSize: '1.2rem',
-                      fontWeight: 'bold',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    ✕
-                  </button>
-                </div>
+            {/* CARTAS (MAZO) */}
+            <div className="jugarMazo">
+              {gameState.hand.map(card => (
+                <Card 
+                  key={card.id} 
+                  card={card} 
+                  onClick={() => selectCard(card.id)} 
+                />
               ))}
             </div>
           </div>
-        )}
 
-        {/* Cartas en mano */}
-        <div style={{
-          display: 'flex',
-          gap: '10px',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          padding: '20px',
-          background: 'rgba(0,0,0,0.3)',
-          borderRadius: '12px',
-          minHeight: '160px'
-        }}>
-          {gameState.hand.map(card => (
-            <Card
-              key={card.id}
-              card={card}
-              onClick={() => selectCard(card.id)}
-            />
-          ))}
+          {/* DERECHA: OPONENTE */}
+          <div className='jugarTablaInformacion'>
+            <div className="jugarRecursoNombre">
+              {opponentName || 'Oponente'}
+            </div>
+            
+            <div className="jugarRecursoNombre">Score</div>
+            <div className="jugarRecursoValor">{opponentScore}</div>
+             {/* Barra de progreso visual simple para el oponente basada en el mismo objetivo */}
+             <div className="jugarRecursoProgreso" style={{ width: `${Math.min((opponentScore / blindInfo.scoreNeeded) * 100, 100)}%` }}></div>
+            <div className='jugarRecursoDivision'></div>
+
+            <div className='jugarRecursos'>
+              <div className="jugarRecursoNombre">Manos</div>
+              <div className="jugarRecursoValor">{opponentHands}</div>
+            </div>
+
+            <div className='jugarRecursos'>
+              <div className="jugarRecursoNombre">Descartes</div>
+              <div className="jugarRecursoValor">{opponentDiscards}</div>
+            </div>
+
+            <div className='jugarRecursos'>
+              <div className="jugarRecursoNombre">Dinero</div>
+              <div className="jugarRecursoValor">${opponentMoney}</div>
+            </div>
+          </div>
+
         </div>
 
-        {/* Botones de acción */}
-        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <Button
-            variant="primary"
-            onClick={() => {
+        {/* BOTONES ACCIONES */}
+        <div className="jugarBottonesAcciones">
+          <button className="buttonBlue" onClick={() => {
+              discardSelectedCards()
+              sendGameAction('DISCARD', {
+                discardsRemaining: gameState.currentRound.discardsRemaining - 1
+              })
+            }} disabled={!canDiscard}>
+            Descartar ({gameState.currentRound.discardsRemaining})
+          </button>
+
+          <button className="buttonGreen" onClick={() => {
               playSelectedHand()
               if (currentHandScore) {
                 sendGameAction('PLAY_HAND', {
@@ -526,132 +395,59 @@ function PlayMultiplayerGame() {
                   handsRemaining: gameState.currentRound.handsRemaining - 1
                 })
               }
-            }}
-            disabled={!canPlay}
-          >
+            }} disabled={!canPlay}>
             Jugar Mano ({gameState.currentRound.handsRemaining})
-          </Button>
+          </button>
           
-          <Button
-            variant="secondary"
-            onClick={() => {
-              discardSelectedCards()
-              sendGameAction('DISCARD', {
-                discardsRemaining: gameState.currentRound.discardsRemaining - 1
-              })
-            }}
-            disabled={!canDiscard}
-          >
-            Descartar ({gameState.currentRound.discardsRemaining})
-          </Button>
-          
-          <Button
-            variant="secondary"
-            onClick={() => setShowChat(!showChat)}
-            style={{ position: 'relative' }}
-          >
+          {/*
+          <button className="buttonBlue" onClick={() => setShowChat(!showChat)}>
             💬 Chat
             {hasUnreadMessages && (
-              <span style={{
-                position: 'absolute',
-                top: '5px',
-                right: '5px',
-                width: '10px',
-                height: '10px',
-                backgroundColor: '#ef4444',
-                borderRadius: '50%',
-                border: '2px solid white',
-                animation: 'pulse 2s infinite'
-              }} />
+              <span></span>
             )}
-          </Button>
-          
-          <Button
-            variant="secondary"
-            onClick={handleAddTestJoker}
-          >
-            + Joker (Test)
-          </Button>
-          
-          <Button
-            variant="neutral"
-            onClick={handleExit}
-          >
-            Salir
-          </Button>
-        </div>
+          </button> */}
 
-        {/* Panel de Chat */}
+          {/*
+           <button className="buttonBlue" onClick={handleAddTestJoker}>
+            + Joker (Test)
+          </button>*/}
+
+          
+        </div>
+        <button className="buttonRed" onClick={handleExit}>
+            Salir
+          </button>
+
+        {/* CHAT FLOTANTE / PANEL */}
         {showChat && (
-          <div className="panel" style={{ 
-            width: '100%',
-            maxWidth: '600px',
-            padding: '20px'
-          }}>
-            <h3 style={{ margin: '0 0 15px 0', textAlign: 'center' }}>💬 Chat</h3>
-            <div style={{
-              height: '200px',
-              overflowY: 'auto',
-              marginBottom: '15px',
-              padding: '10px',
-              background: 'rgba(0,0,0,0.3)',
-              borderRadius: '8px'
-            }}>
-              {chatMessages.length === 0 ? (
-                <div style={{ textAlign: 'center', opacity: 0.6, padding: '20px' }}>
-                  No hay mensajes aún
+          <div className="panel">
+            <h3>Chat</h3>
+            <div>
+              {chatMessages.map((msg, idx) => (
+                <div key={idx}>
+                  <b>{msg.playerId === playerId ? 'Tú' : opponentName}:</b> {msg.text}
                 </div>
-              ) : (
-                chatMessages.map((msg, idx) => (
-                  <div 
-                    key={idx}
-                    style={{
-                      marginBottom: '10px',
-                      padding: '8px 12px',
-                      background: msg.playerId === playerId ? 'rgba(0, 255, 246, 0.1)' : 'rgba(255, 255, 255, 0.1)',
-                      borderRadius: '8px',
-                      borderLeft: `3px solid ${msg.playerId === playerId ? 'var(--colorBlueNeon)' : 'var(--colorRed)'}`
-                    }}
-                  >
-                    <div style={{ fontSize: '0.8rem', opacity: 0.7, marginBottom: '4px' }}>
-                      {msg.playerId === playerId ? 'Tú' : opponentName}
-                    </div>
-                    <div>{msg.text}</div>
-                  </div>
-                ))
-              )}
+              ))}
               <div ref={chatEndRef} />
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
+            <div>
+              <input 
+                type="text" 
+                value={chatInput} 
+                onChange={(e) => setChatInput(e.target.value)} 
                 onKeyPress={(e) => e.key === 'Enter' && handleSendChat()}
-                placeholder="Escribe un mensaje..."
-                style={{
-                  flex: 1,
-                  padding: '10px',
-                  borderRadius: '8px',
-                  border: '2px solid var(--colorBlueNeon)',
-                  background: 'rgba(0,0,0,0.5)',
-                  color: 'var(--fontColor)',
-                  fontSize: '1rem'
-                }}
+                placeholder="..."
               />
-              <Button
-                variant="primary"
-                onClick={handleSendChat}
-                disabled={!chatInput.trim()}
-              >
-                Enviar
-              </Button>
+              <button onClick={handleSendChat}>
+                ➤
+              </button>
             </div>
           </div>
         )}
+
       </div>
 
-      {/* Notificaciones flotantes */}
+      {/* NOTIFICACIONES */}
       {notifications.map(notification => (
         <FloatingNotification
           key={notification.id}
@@ -683,5 +479,3 @@ export default function PlayMultiplayer() {
 
   return <PlayMultiplayerGame />
 }
-
-

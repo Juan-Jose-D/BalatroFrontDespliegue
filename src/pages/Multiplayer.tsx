@@ -1,95 +1,46 @@
 import { useNavigate } from 'react-router-dom'
 import BackgroundWrapper from '../components/BackgroundWrapper'
-import multiplayerBg from '../assets/backgrounds/multiplayer-bg.png'
-import Button from '../components/Button'
+import background from '../assets/backgrounds/generalBackground.png'
 
 export default function Multiplayer() {
   const nav = useNavigate()
 
   return (
-    <BackgroundWrapper image={multiplayerBg}>
-      <div className="panel multiplayerRoot" >
-        <h2>Multijugador</h2>
+    <BackgroundWrapper image={background}>
+      <div className="backgroundPanel multijugadorMenuGap">
 
-        <div className="column" style={{ marginTop: 10 }}>
-          {/* Matchmaking Automático */}
-          <div style={{ marginBottom: 16, textAlign: 'center' }}>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: 8, color: '#666' }}>
-              🎲 Matchmaking Automático
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: '#888', marginBottom: 10 }}>
-              Emparejar con cualquier jugador disponible
-            </p>
-            <div className="row center" style={{ gap: 8 }}>
-              <Button
-                variant="primary"
-                className="btn btnPrimary"
-                onClick={() => nav('/create')}
-                style={{ flex: 1 }}
-              >
-                Buscar Partida
-              </Button>
-            </div>
-          </div>
+        <h1>Multijugador</h1>
+        <h2>Emparejamiento Automático</h2>
+        <button
+          className="buttonGreen"
+          onClick={() => nav('/searchRoom')}
+        >
+          Jugar
+        </button>
 
-          {/* Separador */}
-          <div style={{ 
-            borderTop: '2px solid #ddd', 
-            margin: '16px 0',
-            position: 'relative'
-          }}>
-            <span style={{
-              position: 'absolute',
-              top: '-12px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              backgroundColor: 'white',
-              padding: '0 10px',
-              fontSize: '0.85rem',
-              color: '#999'
-            }}>
-              O
-            </span>
-          </div>
-
-          {/* Salas Privadas */}
-          <div style={{ marginTop: 16, textAlign: 'center' }}>
-            <h3 style={{ fontSize: '1.1rem', marginBottom: 8, color: '#666' }}>
-              🔐 Salas Privadas
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: '#888', marginBottom: 10 }}>
-              Jugar con un amigo usando código de 6 dígitos
-            </p>
-            <div className="row center" style={{ gap: 8 }}>
-              <Button
-                variant="secondary"
-                className="btn btnSecondary"
-                onClick={() => nav('/private/create')}
-                style={{ flex: 1 }}
-              >
-                Crear Sala
-              </Button>
-              <Button
-                variant="secondary"
-                className="btn btnSecondary"
-                onClick={() => nav('/private/join')}
-                style={{ flex: 1 }}
-              >
-                Unirse
-              </Button>
-            </div>
-          </div>
-
-          {/* Botón Volver */}
-          <Button
-            variant="neutral"
-            className="btn btnNeutral"
-            onClick={() => nav('/')}
-            style={{ marginTop: 24 }}
+        <h2>Salas Privadas</h2>
+        <div className="multijugadorMenuDivSalasBotones">
+          <button
+            className="buttonGreen"
+            onClick={() => nav('/createPrivateRoom')}
           >
-            Volver al menú
-          </Button>
+            Crear Sala
+          </button>
+
+          <button
+            className="buttonBlue"
+            onClick={() => nav('/private/join')}
+          >
+            Unirse
+          </button>
         </div>
+        <button
+          className="buttonRed"
+          onClick={() => nav('/')}
+        >
+          Volver
+        </button>
+
       </div>
     </BackgroundWrapper>
   )
