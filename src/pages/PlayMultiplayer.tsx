@@ -6,6 +6,7 @@ import JokerCard from '../components/game/JokerCard'
 import Shop from '../components/Shop'
 import Button from '../components/Button'
 import FloatingNotification from '../components/FloatingNotification'
+import VoiceControls from '../components/VoiceControls'
 import playBg from '../assets/backgrounds/generalBackground.png'
 import { useGameMultiplayer } from '../context/GameMultiplayerContext'
 import { useNotifications } from '../hooks/useNotifications'
@@ -19,6 +20,7 @@ import type { ShopItem } from '../types/shop'
 
 function PlayMultiplayerGame() {
   const nav = useNavigate()
+  const [searchParams] = useSearchParams()
   const [showShop, setShowShop] = useState(false)
   const [showChat, setShowChat] = useState(false)
   const [chatInput, setChatInput] = useState('')
@@ -28,17 +30,40 @@ function PlayMultiplayerGame() {
   
   const {
     game,
+    opponentId,
     opponentName,
     opponentScore,
     opponentMoney,
     opponentHands,
     opponentDiscards,
     playerId,
+    gameId: contextGameId,
     chatMessages,
     sendChatMessage,
     sendGameAction,
     lastOpponentAction
   } = useGameMultiplayer()
+  
+  // Obtener gameId y determinar IDs de jugadores para chat de voz
+  const gameId = searchParams.get('gameId') || contextGameId || game?.id || ''
+  
+  // Usar opponentId del contexto que ya existe y funciona
+  const remotePlayerId = opponentId
+  
+  // Determinar quién es el iniciador basado en los IDs
+  // El jugador con el ID "menor" lexicográficamente será el iniciador
+  const isInitiator = playerId < remotePlayerId
+  
+  // Log para debug de IDs de voz
+  useEffect(() => {
+    console.log('🎤 Voice Chat IDs:', { 
+      gameId, 
+      playerId, 
+      remotePlayerId, 
+      isInitiator,
+      hasAllIds: !!(gameId && playerId && remotePlayerId)
+    })
+  }, [gameId, playerId, remotePlayerId, isInitiator])
   
   // Verificar si el WebSocket está conectado
   const [isConnected, setIsConnected] = useState(false)
@@ -253,6 +278,16 @@ function PlayMultiplayerGame() {
   // -----------------------
   return (
     <BackgroundWrapper image={playBg}>
+      {/* Controles de Chat de Voz */}
+      {gameId && playerId && remotePlayerId && (
+        <VoiceControls
+          gameId={gameId}
+          localPlayerId={playerId}
+          remotePlayerId={remotePlayerId}
+          isInitiator={isInitiator}
+        />
+      )}
+
       <div className="jugarDivPrincipal">
 
         {/* HEADER */}
@@ -351,8 +386,10 @@ function PlayMultiplayerGame() {
               {opponentName || 'Oponente'}
             </div>
             
-            <div className="jugarRecursoNombre">Score</div>
-            <div className="jugarRecursoValor">{opponentScore}</div>
+            <div className='jugarRecursos'>
+              <div className="jugarRecursoNombre">Score</div>
+              <div className="jugarRecursoValor">{opponentScore}</div>
+            </div>
              {/* Barra de progreso visual simple para el oponente basada en el mismo objetivo */}
              <div className="jugarRecursoProgreso" style={{ width: `${Math.min((opponentScore / blindInfo.scoreNeeded) * 100, 100)}%` }}></div>
             <div className='jugarRecursoDivision'></div>

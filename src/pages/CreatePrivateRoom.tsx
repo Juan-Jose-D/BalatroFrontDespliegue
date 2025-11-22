@@ -39,8 +39,19 @@ export default function CreatePrivateRoom() {
   }, [currentGame, nav, playerId, roomInfo])
 
   const handleCreateRoom = async () => {
-    if (!isConnected) await connect()
-    createRoom()
+    try {
+      // Conectar si no está conectado
+      if (!isConnected) {
+        await connect()
+        // Esperar un poco para que la conexión se estabilice
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+      
+      // Crear la sala
+      createRoom()
+    } catch (err) {
+      console.error('Error al crear sala:', err)
+    }
   }
 
   const handleCancel = () => {
@@ -60,7 +71,7 @@ export default function CreatePrivateRoom() {
 
         <h1>Crear Sala Privada</h1>
 
-        {isConnected ? '🟢 Conectado' : '🔴 Desconectado'}
+        {isConnected ? 'Conectado' : 'Desconectado'}
 
         {roomCode && (
           <div className="createDivCopy">
@@ -75,7 +86,7 @@ export default function CreatePrivateRoom() {
 
         {!roomCode && (
           <button className="buttonGreen" onClick={handleCreateRoom}>
-            {isConnected ? 'Crear Sala' : 'Conectar y Crear'}
+            Crear Sala
           </button>
         )}
 

@@ -167,10 +167,12 @@ export class WebSocketService {
 
     const subscription = this.client.subscribe(topic, (message: IMessage) => {
       try {
+        console.log(`📬 Mensaje recibido en ${topic}:`, message.body);
         const parsedMessage: GameMessage = JSON.parse(message.body);
+        console.log(`📋 Mensaje parseado tipo: ${parsedMessage.type}`);
         callback(parsedMessage);
       } catch (error) {
-        console.error("❌ Error al parsear mensaje:", error);
+        console.error("❌ Error al parsear mensaje:", error, message.body);
       }
     });
 

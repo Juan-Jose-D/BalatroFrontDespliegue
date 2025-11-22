@@ -46,24 +46,43 @@ export default function JoinPrivateRoom() {
     if (isConnected && error) clearError()
   }, [isConnected, error, clearError])
 
-  const handleJoinRoom = async () => {
-    if (codeInput.length !== 6) return
+  // Resetear isJoining cuando hay un error
+  useEffect(() => {
+    if (error) {
+      setIsJoining(false)
+    }
+  }, [error])
 
+  const handleJoinRoom = async () => {
+    if (codeInput.length < 5) {
+      console.log('⚠️ Código muy corto:', codeInput.length)
+      return // Mínimo 5 caracteres
+    }
+
+    console.log('🚀 Intentando unirse con código:', codeInput)
     setIsJoining(true)
 
     try {
+      // Conectar si no está conectado
       if (!isConnected) {
+        console.log('📡 Conectando al servidor...')
         await connect()
-        setTimeout(() => {
-          joinRoom(codeInput)
-          setIsJoining(false)
-        }, 500)
-      } else {
-        joinRoom(codeInput)
-        setTimeout(() => setIsJoining(false), 1000)
+        // Esperar un poco para que la conexión se estabilice
+        await new Promise(resolve => setTimeout(resolve, 500))
+        console.log('✅ Conectado')
       }
+      
+      // Unirse a la sala
+      console.log('🚪 Uniéndose a sala:', codeInput)
+      joinRoom(codeInput)
+      
+      // Timeout de seguridad: si no hay respuesta en 5 segundos, resetear el estado
+      setTimeout(() => {
+        setIsJoining(false)
+        console.log('⏱️ Timeout: No se recibió respuesta del servidor')
+      }, 5000)
     } catch (err) {
-      console.error('Error al conectar:', err)
+      console.error('❌ Error al unirse:', err)
       setIsJoining(false)
     }
   }
@@ -85,7 +104,7 @@ export default function JoinPrivateRoom() {
 
         <h1>Unirse a Sala</h1>
 
-        {isConnected ? '🟢 Conectado' : '🔴 Desconectado'}
+        {isConnected ? 'Conectado' : 'Desconectado'}
 
         <h2>Ingrese código:</h2>
 
@@ -97,20 +116,31 @@ export default function JoinPrivateRoom() {
           maxLength={6}
           className="codeInput"
           onKeyPress={(e) => {
-            if (e.key === 'Enter' && codeInput.length === 6) {
+            if (e.key === 'Enter' && codeInput.length >= 5) {
               handleJoinRoom()
             }
           }}
         />
 
-        {error && <p>⚠️ {error}</p>}
+        {error && (
+          <div style={{
+            backgroundColor: '#fee',
+            border: '2px solid #f88',
+            borderRadius: '8px',
+            padding: '12px',
+            marginTop: '12px',
+            color: '#c00'
+          }}>
+            {error}
+          </div>
+        )}
 
         <button
           className="buttonGreen"
           onClick={handleJoinRoom}
-          disabled={codeInput.length !== 6 || isJoining}
+          disabled={codeInput.length < 5 || isJoining}
         >
-          {isJoining ? 'Uniéndose...' : (isConnected ? 'Unirse' : 'Conectar y Unirse')}
+          {isJoining ? 'Uniéndose...' : 'Unirse'}
         </button>
 
         <button className="buttonRed" onClick={handleCancel}>
