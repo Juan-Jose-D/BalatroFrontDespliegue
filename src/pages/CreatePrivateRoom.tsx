@@ -32,6 +32,8 @@ export default function CreatePrivateRoom() {
       gameId: currentGame.gameId,
       player1Id: roomInfo.hostId,
       player1Name: roomInfo.hostName || 'Jugador 1',
+      player2Id: currentGame.guestId ?? '',
+      player2Name: currentGame.guestName ?? 'Jugador 2',
       playerId,
     })
 

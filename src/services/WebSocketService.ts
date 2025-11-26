@@ -18,6 +18,7 @@ export class WebSocketService {
   private client: Client | null = null;
   private subscriptions: Map<string, StompSubscription> = new Map();
   private messageHandlers: Map<string, MessageCallback[]> = new Map();
+  private pendingSubscriptions: Map<string, MessageCallback> = new Map();
   private playerId: string | null = null;
   private isConnected: boolean = false;
   private reconnectAttempts: number = 0;
@@ -52,13 +53,58 @@ export class WebSocketService {
           heartbeatIncoming: 4000,
           heartbeatOutgoing: 4000,
 
-          onConnect: () => {
+          onConnect: async () => {
             console.log("✅ Conectado al servidor WebSocket");
             this.isConnected = true;
             this.reconnectAttempts = 0;
             
+            // IMPORTANTE: Esperar un momento para asegurar que el cliente STOMP esté completamente listo
+            // El callback onConnect puede dispararse antes de que la conexión subyacente esté lista
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Verificar que el cliente esté realmente conectado
+            if (!this.client?.connected) {
+              console.warn("⚠️ Cliente STOMP aún no está completamente conectado, esperando...");
+              // Esperar un poco más
+              await new Promise(resolve => setTimeout(resolve, 200));
+              
+              if (!this.client?.connected) {
+                console.error("❌ Cliente STOMP no se conectó después de esperar");
+                reject(new Error("Cliente STOMP no se conectó completamente"));
+                return;
+              }
+            }
+            
+            console.log("✅ Cliente STOMP completamente conectado y listo");
+            
+            // IMPORTANTE: Registrar el playerId con el sessionId del backend
+            // Esto es necesario para que el backend pueda enrutar mensajes WebRTC
+            console.log("📝 Registrando sesión del jugador:", this.playerId);
+            try {
+              await this.registerSession();
+            } catch (error) {
+              console.error("❌ Error al registrar sesión en onConnect:", error);
+              // No rechazar la conexión por esto, pero registrar el error
+              // Intentar de nuevo después de un delay
+              setTimeout(async () => {
+                try {
+                  await this.registerSession();
+                } catch (retryError) {
+                  console.error("❌ Error al reintentar registro de sesión:", retryError);
+                }
+              }, 500);
+            }
+            
             // Suscribirse a canales de usuario
             this.subscribeToUserChannels();
+            
+            // Procesar suscripciones pendientes
+            console.log("📋 Procesando suscripciones pendientes:", this.pendingSubscriptions.size);
+            this.pendingSubscriptions.forEach((callback, topic) => {
+              console.log("📡 Suscribiendo a tópico pendiente:", topic);
+              this.subscribe(topic, callback);
+            });
+            this.pendingSubscriptions.clear();
             
             if (this.onConnectCallback) {
               this.onConnectCallback();
@@ -71,6 +117,7 @@ export class WebSocketService {
             console.log("❌ Desconectado del servidor WebSocket");
             this.isConnected = false;
             this.subscriptions.clear();
+            // No limpiar pendingSubscriptions para que se reintenten al reconectar
             
             if (this.onDisconnectCallback) {
               this.onDisconnectCallback();
@@ -136,26 +183,128 @@ export class WebSocketService {
   }
 
   /**
+   * Registrar la sesión del jugador en el backend
+   * Esto asocia el playerId con el sessionId actual del WebSocket
+   * Retorna una promesa que se resuelve cuando el registro se completa
+   */
+  public registerSession(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.client || !this.isConnected || !this.playerId) {
+        const error = "No se puede registrar sesión: no conectado o sin playerId";
+        console.warn("⚠️", error);
+        reject(new Error(error));
+        return;
+      }
+
+      // Verificar que el cliente STOMP esté realmente conectado y activo
+      if (!this.client.connected) {
+        const error = "Cliente STOMP no está completamente conectado";
+        console.warn("⚠️", error, "Esperando...");
+        // Esperar un poco y reintentar
+        setTimeout(() => {
+          if (this.client?.connected) {
+            this.registerSession().then(resolve).catch(reject);
+          } else {
+            reject(new Error("Cliente STOMP no se conectó después de esperar"));
+          }
+        }, 200);
+        return;
+      }
+
+      const registrationMessage = {
+        playerId: this.playerId,
+        timestamp: new Date().toISOString(),
+      };
+
+      console.log("📤 Enviando registro de sesión:", registrationMessage);
+      
+      try {
+        // Verificar una vez más antes de publicar
+        if (!this.client.connected) {
+          throw new Error("Cliente STOMP se desconectó antes de publicar");
+        }
+
+        this.client.publish({
+          destination: "/app/session/register",
+          body: JSON.stringify(registrationMessage),
+        });
+
+        console.log("✅ Registro de sesión enviado");
+        
+        // Dar un pequeño delay para asegurar que el backend procese el registro
+        // En producción, sería mejor tener una confirmación del backend
+        setTimeout(() => {
+          resolve();
+        }, 100);
+      } catch (error) {
+        console.error("❌ Error al registrar sesión:", error);
+        reject(error);
+      }
+    });
+  }
+
+  /**
    * Enviar mensaje al servidor
    */
   public send(destination: string, body: any): void {
+    console.log("📡 ========== ENVIANDO MENSAJE AL SERVIDOR ==========");
+    console.log("📡 Destination:", destination);
+    console.log("📡 Has client:", !!this.client);
+    console.log("📡 Is connected:", this.isConnected);
+    console.log("📡 Client connected:", this.client?.connected);
+    console.log("📡 Body type:", typeof body);
+    
+    if (destination === "/app/webrtc/signal" && body.targetId) {
+      console.log("📡 Este es un mensaje WebRTC para:", body.targetId);
+      console.log("📡 El backend debe enrutar este mensaje a la sesión de:", body.targetId);
+    }
+    
     if (!this.client || !this.isConnected) {
-      console.error("❌ No se puede enviar mensaje: no conectado");
+      console.error("❌ No se puede enviar mensaje: no conectado", {
+        hasClient: !!this.client,
+        isConnected: this.isConnected
+      });
       return;
     }
 
-    this.client.publish({
-      destination,
-      body: JSON.stringify(body),
-    });
+    if (!this.client.connected) {
+      console.error("❌ Cliente STOMP no está completamente conectado");
+      return;
+    }
+
+    console.log("📤 Publicando mensaje a:", destination);
+    console.log("📤 Body completo:", JSON.stringify(body, null, 2));
+    
+    try {
+      this.client.publish({
+        destination,
+        body: JSON.stringify(body),
+      });
+      console.log("✅ Mensaje publicado exitosamente");
+      console.log("✅ El backend debería procesar este mensaje ahora");
+    } catch (error) {
+      console.error("❌ Error al publicar mensaje:", error);
+      throw error;
+    }
+    
+    console.log("📡 =================================================");
   }
 
   /**
    * Suscribirse a un tópico
    */
   public subscribe(topic: string, callback: MessageCallback): void {
+    // Si no está conectado, guardar para procesar después
     if (!this.client || !this.isConnected) {
-      console.warn("⚠️ No conectado. La suscripción se realizará al conectar.");
+      console.warn(`⚠️ No conectado. Guardando suscripción pendiente para ${topic}`);
+      this.pendingSubscriptions.set(topic, callback);
+      return;
+    }
+
+    // Verificar que el cliente STOMP esté realmente conectado
+    if (!this.client.connected) {
+      console.warn(`⚠️ Cliente STOMP no está completamente conectado. Guardando suscripción pendiente para ${topic}`);
+      this.pendingSubscriptions.set(topic, callback);
       return;
     }
 
@@ -165,19 +314,31 @@ export class WebSocketService {
       return;
     }
 
-    const subscription = this.client.subscribe(topic, (message: IMessage) => {
-      try {
-        console.log(`📬 Mensaje recibido en ${topic}:`, message.body);
-        const parsedMessage: GameMessage = JSON.parse(message.body);
-        console.log(`📋 Mensaje parseado tipo: ${parsedMessage.type}`);
-        callback(parsedMessage);
-      } catch (error) {
-        console.error("❌ Error al parsear mensaje:", error, message.body);
-      }
-    });
+    console.log(`🔔 Suscribiéndose activamente a ${topic}...`);
+    
+    try {
+      const subscription = this.client.subscribe(topic, (message: IMessage) => {
+        try {
+          console.log(`📬 ========== MENSAJE RECIBIDO EN ${topic} ==========`);
+          console.log(`📬 Mensaje recibido en ${topic}:`, message.body);
+          console.log(`📬 Headers del mensaje:`, message.headers);
+          const parsedMessage: GameMessage = JSON.parse(message.body);
+          console.log(`📋 Mensaje parseado tipo: ${parsedMessage.type}`);
+          console.log(`📋 Mensaje completo:`, parsedMessage);
+          callback(parsedMessage);
+          console.log(`📬 ===========================================`);
+        } catch (error) {
+          console.error("❌ Error al parsear mensaje:", error, message.body);
+        }
+      });
 
-    this.subscriptions.set(topic, subscription);
-    console.log(`✅ Suscrito a ${topic}`);
+      this.subscriptions.set(topic, subscription);
+      console.log(`✅ Suscrito exitosamente a ${topic}`);
+    } catch (error) {
+      console.error(`❌ Error al suscribirse a ${topic}:`, error);
+      // Guardar como pendiente para reintentar más tarde
+      this.pendingSubscriptions.set(topic, callback);
+    }
   }
 
   /**

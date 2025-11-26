@@ -1,5 +1,6 @@
 import { useVoiceChat } from '../hooks/useVoiceChat'
 import type { VoiceConnectionState } from '../types/webrtc'
+import VoiceDebugPanel from './VoiceDebugPanel'
 
 interface VoiceControlsProps {
   gameId: string
@@ -20,6 +21,7 @@ export default function VoiceControls({
     isActive,
     error,
     isConnected,
+    audioLevel,
     startVoiceChat,
     stopVoiceChat,
     toggleMute,
@@ -74,17 +76,18 @@ export default function VoiceControls({
   }
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: '15px',
-        right: '15px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px',
-        zIndex: 400,
-      }}
-    >
+    <>
+      <div
+        style={{
+          position: 'fixed',
+          top: '15px',
+          right: '15px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          zIndex: 400,
+        }}
+      >
       {/* Botón minimalista del micrófono */}
       <button
         onClick={handleToggle}
@@ -175,6 +178,31 @@ export default function VoiceControls({
         />
       )}
 
+      {/* Indicador de nivel de audio */}
+      {isActive && isConnected && (
+        <div
+          title={`Nivel de audio: ${audioLevel}`}
+          style={{
+            width: '60px',
+            height: '8px',
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            borderRadius: '4px',
+            overflow: 'hidden',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+          }}
+        >
+          <div
+            style={{
+              width: `${audioLevel}%`,
+              height: '100%',
+              backgroundColor: audioLevel > 60 ? '#10b981' : audioLevel > 30 ? '#f59e0b' : '#6b7280',
+              transition: 'width 0.1s ease-out, background-color 0.2s',
+              boxShadow: audioLevel > 30 ? '0 0 4px currentColor' : 'none',
+            }}
+          />
+        </div>
+      )}
+
       {/* Mensaje de error si hay */}
       {error && (
         <div
@@ -219,7 +247,11 @@ export default function VoiceControls({
           50% { opacity: 0.5; }
         }
       `}</style>
-    </div>
+      </div>
+
+      {/* Panel de depuración */}
+      <VoiceDebugPanel isActive={isActive} />
+    </>
   )
 }
 

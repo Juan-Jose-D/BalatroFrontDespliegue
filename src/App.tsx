@@ -17,6 +17,8 @@ function PlayMultiplayerWrapper() {
   const [searchParams] = useSearchParams()
   const gameId = searchParams.get('gameId') || ''
   const playerId = searchParams.get('playerId') || ''
+  const player1Id = searchParams.get('player1Id') || ''
+  const player2Id = searchParams.get('player2Id') || ''
   const opponentName = 'Oponente'
 
   // Si no hay parámetros necesarios, renderizar sin provider (la página manejará la redirección)
@@ -24,8 +26,25 @@ function PlayMultiplayerWrapper() {
     return <PlayMultiplayer />
   }
   
-  // Extraer opponentId del gameId o generar uno basado en el gameId
-  const opponentId = `opponent-${gameId.substring(0, 8)}`
+  // Determinar quién es el oponente basándose en player1Id y player2Id
+  let opponentId: string
+  
+  if (player1Id && player2Id) {
+    // Si tenemos ambos IDs, el oponente es el que NO es el playerId actual
+    opponentId = playerId === player1Id ? player2Id : player1Id
+  } else {
+    // Fallback: generar un ID basado en el gameId (para compatibilidad con código viejo)
+    opponentId = `opponent-${gameId.substring(0, 8)}`
+  }
+  
+  console.log('🎮 PlayMultiplayerWrapper - IDs:', {
+    gameId,
+    playerId,
+    player1Id,
+    player2Id,
+    opponentId,
+    isPlayer1: playerId === player1Id
+  })
 
   return (
     <GameMultiplayerProvider 

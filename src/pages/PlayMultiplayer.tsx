@@ -52,17 +52,34 @@ function PlayMultiplayerGame() {
   
   // Determinar quién es el iniciador basado en los IDs
   // El jugador con el ID "menor" lexicográficamente será el iniciador
-  const isInitiator = playerId < remotePlayerId
+  // Esto asegura que ambos jugadores lleguen a la misma conclusión
+  const isInitiator = playerId && remotePlayerId ? playerId < remotePlayerId : false
   
-  // Log para debug de IDs de voz
+  // Log detallado para debug de IDs de voz
   useEffect(() => {
+    const comparison = playerId && remotePlayerId 
+      ? `${playerId} < ${remotePlayerId} = ${playerId < remotePlayerId}`
+      : 'No se puede comparar (faltan IDs)'
+    
     console.log('🎤 Voice Chat IDs:', { 
       gameId, 
       playerId, 
       remotePlayerId, 
       isInitiator,
-      hasAllIds: !!(gameId && playerId && remotePlayerId)
+      comparison,
+      hasAllIds: !!(gameId && playerId && remotePlayerId),
+      playerIdType: typeof playerId,
+      remotePlayerIdType: typeof remotePlayerId
     })
+    
+    if (!playerId || !remotePlayerId) {
+      console.warn('⚠️ Faltan IDs para determinar el iniciador:', {
+        hasPlayerId: !!playerId,
+        hasRemotePlayerId: !!remotePlayerId
+      })
+    } else {
+      console.log(`🎤 Rol determinado: ${isInitiator ? '👑 INICIADOR' : '👥 RECEPTOR'}`)
+    }
   }, [gameId, playerId, remotePlayerId, isInitiator])
   
   // Verificar si el WebSocket está conectado

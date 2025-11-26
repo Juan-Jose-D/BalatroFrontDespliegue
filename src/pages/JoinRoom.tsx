@@ -29,7 +29,13 @@ export default function JoinRoom() {
   // Navegar cuando hay partida
   useEffect(() => {
     if (currentMatch) {
-      nav(`/play?gameId=${currentMatch.gameId}&playerId=${playerId}`)
+      const params = new URLSearchParams({
+        gameId: currentMatch.gameId,
+        playerId: playerId,
+        player1Id: currentMatch.player1Id,
+        player2Id: currentMatch.player2Id,
+      })
+      nav(`/play?${params.toString()}`)
     }
   }, [currentMatch, nav, playerId])
 
