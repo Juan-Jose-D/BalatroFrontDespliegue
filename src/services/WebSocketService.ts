@@ -126,12 +126,14 @@ export class WebSocketService {
 
           onStompError: (frame) => {
             console.error("❌ Error STOMP:", frame);
+            console.error("❌ URL intentada:", BACKEND_WS_URL);
+            console.error("❌ Verifica que el backend esté corriendo y accesible");
             
             const errorMessage: GameMessage = {
               type: MessageType.ERROR,
               gameId: null,
               playerId: this.playerId,
-              message: frame.headers["message"] || "Error de conexión",
+              message: frame.headers["message"] || "Error de conexión con el backend. Verifica que el servidor esté corriendo.",
               timestamp: new Date().toISOString(),
             };
             
@@ -139,11 +141,17 @@ export class WebSocketService {
               this.onErrorCallback(errorMessage);
             }
             
-            reject(new Error(frame.headers["message"] || "Error de conexión"));
+            reject(new Error(frame.headers["message"] || "Error de conexión con el backend. Verifica que el servidor esté corriendo en el puerto 8080."));
           },
 
           onWebSocketError: (error) => {
             console.error("❌ Error WebSocket:", error);
+            console.error("❌ URL intentada:", BACKEND_WS_URL);
+            console.error("❌ Verifica que:");
+            console.error("   1. El backend esté corriendo en el puerto 8080");
+            console.error("   2. El backend tenga el endpoint /ws configurado");
+            console.error("   3. No haya problemas de firewall o red");
+            console.error("   4. La URL del backend sea correcta:", BACKEND_WS_URL);
             reject(error);
           },
         });
@@ -310,7 +318,10 @@ export class WebSocketService {
 
     // Evitar suscripciones duplicadas
     if (this.subscriptions.has(topic)) {
-      console.warn(`⚠️ Ya existe una suscripción a ${topic}`);
+      // Silenciar el warning para canales de usuario que se suscriben automáticamente
+      if (topic !== WS_TOPICS.ERRORS && topic !== WS_TOPICS.PING) {
+        console.warn(`⚠️ Ya existe una suscripción a ${topic}`);
+      }
       return;
     }
 
@@ -359,20 +370,29 @@ export class WebSocketService {
   private subscribeToUserChannels(): void {
     if (!this.playerId) return;
 
-    // Suscribirse a errores
-    this.subscribe(WS_TOPICS.ERRORS, (message) => {
-      console.error("❌ Error del servidor:", message.message);
-      if (this.onErrorCallback) {
-        this.onErrorCallback(message);
-      }
-    });
+    // Verificar si ya estamos suscritos antes de suscribirnos
+    if (this.subscriptions.has(WS_TOPICS.ERRORS)) {
+      console.log("ℹ️ Ya suscrito a errores, omitiendo...");
+    } else {
+      // Suscribirse a errores
+      this.subscribe(WS_TOPICS.ERRORS, (message) => {
+        console.error("❌ Error del servidor:", message.message);
+        if (this.onErrorCallback) {
+          this.onErrorCallback(message);
+        }
+      });
+    }
 
-    // Suscribirse a ping/pong
-    this.subscribe(WS_TOPICS.PING, (message) => {
-      if (message.type === MessageType.PONG) {
-        console.log("🏓 Pong recibido");
-      }
-    });
+    if (this.subscriptions.has(WS_TOPICS.PING)) {
+      console.log("ℹ️ Ya suscrito a ping, omitiendo...");
+    } else {
+      // Suscribirse a ping/pong
+      this.subscribe(WS_TOPICS.PING, (message) => {
+        if (message.type === MessageType.PONG) {
+          console.log("🏓 Pong recibido");
+        }
+      });
+    }
   }
 
   /**

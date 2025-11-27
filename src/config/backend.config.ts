@@ -35,6 +35,16 @@ export const backendConfig: BackendConfig = isDevelopment
 export const BACKEND_WS_URL = `${backendConfig.baseUrl}${backendConfig.wsEndpoint}`;
 export const BACKEND_BASE_URL = backendConfig.baseUrl;
 
+// Log de la URL configurada para debugging
+if (import.meta.env.MODE === "development") {
+  console.log("🔧 Configuración del backend:", {
+    baseUrl: backendConfig.baseUrl,
+    wsEndpoint: backendConfig.wsEndpoint,
+    wsUrl: BACKEND_WS_URL,
+    isDevelopment: isDevelopment
+  });
+}
+
 
 export const WS_TOPICS = {
   MATCHMAKING: "/user/queue/matchmaking",

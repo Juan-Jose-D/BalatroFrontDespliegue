@@ -1,6 +1,6 @@
+import { useState } from 'react'
 import { useVoiceChat } from '../hooks/useVoiceChat'
 import type { VoiceConnectionState } from '../types/webrtc'
-import VoiceDebugPanel from './VoiceDebugPanel'
 
 interface VoiceControlsProps {
   gameId: string
@@ -21,10 +21,12 @@ export default function VoiceControls({
     isActive,
     error,
     isConnected,
-    audioLevel,
+    availableDevices,
+    currentDeviceId,
     startVoiceChat,
     stopVoiceChat,
     toggleMute,
+    changeDevice,
     clearError,
   } = useVoiceChat({
     gameId,
@@ -33,6 +35,8 @@ export default function VoiceControls({
     isInitiator,
     autoStart: false,
   })
+
+  const [showDeviceSelector, setShowDeviceSelector] = useState(false)
 
   const getStateColor = (state: VoiceConnectionState): string => {
     switch (state) {
@@ -126,6 +130,43 @@ export default function VoiceControls({
         {!isActive ? '🎤' : isMuted ? '🔇' : '🎤'}
       </button>
 
+      {/* Botón de selección de micrófono */}
+      {isActive && availableDevices.length > 1 && (
+        <button
+          onClick={() => setShowDeviceSelector(!showDeviceSelector)}
+          title="Seleccionar micrófono"
+          style={{
+            width: '22px',
+            height: '22px',
+            backgroundColor: 'rgba(139, 92, 246, 0.9)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '50%',
+            padding: '0',
+            fontSize: '10px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.15s',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            lineHeight: 1,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 1)'
+            e.currentTarget.style.transform = 'scale(1.1)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 0.9)'
+            e.currentTarget.style.transform = 'scale(1)'
+          }}
+        >
+          🎙️
+        </button>
+      )}
+
+
       {/* Botón X solo cuando está activo */}
       {isActive && (
         <button
@@ -178,31 +219,6 @@ export default function VoiceControls({
         />
       )}
 
-      {/* Indicador de nivel de audio */}
-      {isActive && isConnected && (
-        <div
-          title={`Nivel de audio: ${audioLevel}`}
-          style={{
-            width: '60px',
-            height: '8px',
-            backgroundColor: 'rgba(0, 0, 0, 0.4)',
-            borderRadius: '4px',
-            overflow: 'hidden',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-          }}
-        >
-          <div
-            style={{
-              width: `${audioLevel}%`,
-              height: '100%',
-              backgroundColor: audioLevel > 60 ? '#10b981' : audioLevel > 30 ? '#f59e0b' : '#6b7280',
-              transition: 'width 0.1s ease-out, background-color 0.2s',
-              boxShadow: audioLevel > 30 ? '0 0 4px currentColor' : 'none',
-            }}
-          />
-        </div>
-      )}
-
       {/* Mensaje de error si hay */}
       {error && (
         <div
@@ -249,8 +265,133 @@ export default function VoiceControls({
       `}</style>
       </div>
 
-      {/* Panel de depuración */}
-      <VoiceDebugPanel isActive={isActive} />
+      {/* Selector de dispositivos */}
+      {showDeviceSelector && isActive && availableDevices.length > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '50px',
+            right: '15px',
+            backgroundColor: 'rgba(0, 0, 0, 0.95)',
+            color: '#fff',
+            padding: '12px',
+            borderRadius: '8px',
+            fontSize: '12px',
+            minWidth: '250px',
+            maxWidth: '300px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
+            zIndex: 401,
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ 
+            fontWeight: 'bold', 
+            marginBottom: '8px', 
+            fontSize: '13px',
+            color: '#8b5cf6',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <span>🎙️ Seleccionar Micrófono</span>
+            <button
+              onClick={() => setShowDeviceSelector(false)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: '16px',
+                padding: '0',
+                width: '20px',
+                height: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              ✕
+            </button>
+          </div>
+          
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '6px',
+            maxHeight: '200px',
+            overflowY: 'auto'
+          }}>
+            {availableDevices.map((device) => (
+              <button
+                key={device.deviceId}
+                onClick={() => {
+                  changeDevice(device.deviceId);
+                  setShowDeviceSelector(false);
+                }}
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: currentDeviceId === device.deviceId 
+                    ? 'rgba(139, 92, 246, 0.3)' 
+                    : 'rgba(255, 255, 255, 0.05)',
+                  border: currentDeviceId === device.deviceId 
+                    ? '1px solid rgba(139, 92, 246, 0.8)' 
+                    : '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '4px',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: '11px',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                onMouseEnter={(e) => {
+                  if (currentDeviceId !== device.deviceId) {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (currentDeviceId !== device.deviceId) {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'
+                  }
+                }}
+              >
+                <span>{currentDeviceId === device.deviceId ? '✓' : '○'}</span>
+                <span style={{ flex: 1 }}>{device.label || 'Sin nombre'}</span>
+              </button>
+            ))}
+          </div>
+          
+          {availableDevices.length === 0 && (
+            <div style={{ 
+              padding: '8px', 
+              color: '#f59e0b', 
+              fontSize: '11px',
+              textAlign: 'center'
+            }}>
+              No hay dispositivos disponibles
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Click fuera para cerrar selector */}
+      {showDeviceSelector && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 400,
+          }}
+          onClick={() => setShowDeviceSelector(false)}
+        />
+      )}
+
     </>
   )
 }

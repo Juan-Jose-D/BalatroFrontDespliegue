@@ -18,20 +18,49 @@ export class VoiceChatService {
   private isMuted: boolean = false;
   private isInitiator: boolean = false;
   
-  // Cola de ICE candidates pendientes (para cuando llegan antes de establecer descripción remota)
   private pendingIceCandidates: RTCIceCandidateInit[] = [];
   private isRemoteDescriptionSet: boolean = false;
   
-  // Callbacks
   private onConnectionStateChangeCallback: ConnectionStateCallback | null = null;
   private onRemoteStreamCallback: RemoteStreamCallback | null = null;
   private onErrorCallback: ErrorCallback | null = null;
   
-  // Configuración de ICE servers (STUN servers públicos de Google)
+  private availableDevices: MediaDeviceInfo[] = [];
+  private currentDeviceId: string | null = null;
+  
   private iceServers: RTCIceServer[] = [
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
   ];
+
+  /**
+   * Listar dispositivos de audio disponibles
+   */
+  public async listAudioDevices(): Promise<MediaDeviceInfo[]> {
+    try {
+      // Solicitar permisos primero
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      // Listar dispositivos
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const audioInputs = devices.filter(device => device.kind === 'audioinput');
+      
+      console.log("🎤 Dispositivos de audio disponibles:", audioInputs.length);
+      audioInputs.forEach((device, index) => {
+        console.log(`🎤 Dispositivo ${index}:`, {
+          deviceId: device.deviceId,
+          label: device.label || 'Sin nombre',
+          kind: device.kind,
+          groupId: device.groupId
+        });
+      });
+      
+      return audioInputs;
+    } catch (error) {
+      console.error("❌ Error al listar dispositivos de audio:", error);
+      return [];
+    }
+  }
 
   /**
    * Inicializar el chat de voz
@@ -50,168 +79,198 @@ export class VoiceChatService {
     this.isInitiator = isInitiator;
 
     try {
-      // Obtener acceso al micrófono
-      // Simplificar constraints primero para probar
-      // Si funciona, podemos agregar más configuraciones después
-      console.log("🎤 Solicitando acceso al micrófono con constraints simples...");
+      // Listar dispositivos disponibles primero
+      this.availableDevices = await this.listAudioDevices();
+      
+      // Usar el dispositivo actual si ya está seleccionado, sino seleccionar uno
+      let deviceToUse: MediaDeviceInfo | null = null;
+      
+      if (this.currentDeviceId) {
+        deviceToUse = this.availableDevices.find(d => d.deviceId === this.currentDeviceId) || null;
+        if (deviceToUse) {
+          console.log("🎤 Usando micrófono seleccionado:", deviceToUse.label);
+        } else {
+          console.warn("⚠️ Dispositivo seleccionado no encontrado, usando predeterminado");
+          this.currentDeviceId = null;
+        }
+      }
+      
+      // Si no hay dispositivo seleccionado, intentar usar uno preferido
+      if (!deviceToUse) {
+        // Prioridad 1: Dispositivos con nombres reales (no "default" ni "communications")
+        // Excluir Steam y preferir dispositivos con nombres descriptivos
+        const realDevices = this.availableDevices.filter(d => 
+          d.deviceId !== 'default' && 
+          d.deviceId !== 'communications' &&
+          d.label && 
+          d.label.trim() !== '' &&
+          !d.label.toLowerCase().includes('steam') &&
+          !d.label.toLowerCase().includes('default')
+        );
+        
+        console.log("🎤 Dispositivos reales disponibles:", realDevices.map(d => d.label));
+        
+        if (realDevices.length > 0) {
+          // Preferir dispositivos que no sean "communications" y tengan nombres descriptivos
+          // Ordenar por preferencia: evitar "communications", preferir nombres con "Microphone" o "Mic"
+          const preferredDevices = realDevices.filter(d => 
+            !d.label.toLowerCase().includes('communications')
+          );
+          
+          if (preferredDevices.length > 0) {
+            // Ordenar: preferir dispositivos con "Microphone" o "Mic" en el nombre
+            preferredDevices.sort((a, b) => {
+              const aHasMic = a.label.toLowerCase().includes('mic') || a.label.toLowerCase().includes('microphone');
+              const bHasMic = b.label.toLowerCase().includes('mic') || b.label.toLowerCase().includes('microphone');
+              if (aHasMic && !bHasMic) return -1;
+              if (!aHasMic && bHasMic) return 1;
+              return 0;
+            });
+            
+            deviceToUse = preferredDevices[0];
+          } else {
+            deviceToUse = realDevices[0];
+          }
+          
+          console.log("🎤 Usando micrófono preferido:", deviceToUse.label);
+        } else {
+          // Si no hay dispositivos reales, intentar con "default" o el primero
+          deviceToUse = this.availableDevices.find(d => d.deviceId === 'default') || this.availableDevices[0];
+          if (deviceToUse) {
+            console.log("⚠️ No se encontraron dispositivos reales, usando:", deviceToUse.label);
+            console.log("⚠️ Se recomienda cambiar manualmente el micrófono si este no funciona");
+          }
+        }
+        
+        if (deviceToUse) {
+          this.currentDeviceId = deviceToUse.deviceId;
+        }
+      }
+      
+      const audioConstraints: MediaTrackConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        sampleRate: 48000,
+        channelCount: 1
+      };
+      
+      // Si encontramos un dispositivo, usarlo
+      if (deviceToUse && deviceToUse.deviceId !== 'default' && deviceToUse.deviceId !== 'communications') {
+        audioConstraints.deviceId = { exact: deviceToUse.deviceId };
+      }
+      
+      // Obtener acceso al micrófono con configuración más específica
+      console.log("🎤 Solicitando acceso al micrófono...");
       this.localStream = await navigator.mediaDevices.getUserMedia({
-        audio: true, // Constraints simples primero para evitar problemas
+        audio: audioConstraints,
         video: false,
       });
       
-      console.log("✅ Stream obtenido con constraints simples");
-      
-      // Obtener tracks de audio (se usará más abajo también)
-      const audioTracks = this.localStream.getAudioTracks();
-      
-      // Verificar que el micrófono esté capturando audio real
-      if (audioTracks.length > 0) {
-        const track = audioTracks[0];
-        console.log("🎤 Verificando que el micrófono capture audio real...");
-        
-        // Crear un AudioContext para verificar que hay audio real
-        const audioContext = new AudioContext();
-        const analyzer = audioContext.createAnalyser();
-        analyzer.fftSize = 512;
-        analyzer.minDecibels = -100;
-        analyzer.maxDecibels = -10;
-        
-        const source = audioContext.createMediaStreamSource(this.localStream);
-        source.connect(analyzer);
-        
-        const frequencyData = new Uint8Array(analyzer.frequencyBinCount);
-        let audioDetected = false;
-        
-        // Verificar durante 2 segundos
-        const checkAudio = setInterval(() => {
-          analyzer.getByteFrequencyData(frequencyData);
-          const hasAudio = frequencyData.some(val => val > 10); // Umbral mínimo
-          
-          if (hasAudio && !audioDetected) {
-            const maxFreq = Math.max(...Array.from(frequencyData));
-            console.log("✅ Micrófono capturando audio real:", {
-              maxFrequency: maxFreq,
-              nonZeroValues: Array.from(frequencyData).filter(v => v > 0).length
-            });
-            audioDetected = true;
-          }
-        }, 100);
-        
-        setTimeout(() => {
-          clearInterval(checkAudio);
-          audioContext.close();
-          
-          if (!audioDetected) {
-            console.warn("⚠️ El micrófono no está capturando audio, solo ruido");
-            console.warn("⚠️ Verifica que:");
-            console.warn("   - El micrófono no esté silenciado en el sistema");
-            console.warn("   - Los permisos del navegador estén correctos");
-            console.warn("   - Estés hablando cerca del micrófono");
-          }
-        }, 2000);
-      }
-      
-      // Log de las capacidades del track de audio
-      const audioTrack = this.localStream.getAudioTracks()[0];
-      if (audioTrack && audioTrack.getCapabilities) {
-        const capabilities = audioTrack.getCapabilities();
-        console.log("🎤 Capacidades del micrófono:", capabilities);
-      }
-      
-      if (audioTrack && audioTrack.getSettings) {
-        const settings = audioTrack.getSettings();
-        console.log("🎤 Configuración del micrófono:", settings);
-      }
-
       console.log("✅ Acceso al micrófono obtenido");
-      console.log("🎤 Tracks locales:", this.localStream.getTracks().length);
       
-      // Verificar y habilitar tracks de audio (audioTracks ya está declarado arriba)
-      console.log("🎤 Tracks de audio encontrados:", audioTracks.length);
-      
-      if (audioTracks.length === 0) {
-        throw new Error("❌ No se encontraron tracks de audio en el stream local!");
-      }
-      
-      audioTracks.forEach((track, index) => {
-        console.log(`🎤 Track de audio ${index}:`, {
+      // Verificar tracks locales
+      const localTracks = this.localStream.getAudioTracks();
+      console.log("🎤 Tracks locales:", localTracks.length);
+      localTracks.forEach((track, index) => {
+        console.log(`🎤 Track ${index}:`, {
           id: track.id,
           enabled: track.enabled,
           muted: track.muted,
           readyState: track.readyState,
-          label: track.label,
-          kind: track.kind
+          label: track.label
         });
-        
-        // Asegurar que el track esté habilitado
-        if (!track.enabled) {
-          console.warn(`⚠️ Track ${index} está deshabilitado, habilitándolo...`);
-          track.enabled = true;
-        }
-        
-        if (track.muted) {
-          console.warn(`⚠️ Track ${index} está silenciado!`);
-        }
         
         // Verificar configuración del track
         if (track.getSettings) {
           const settings = track.getSettings();
           console.log(`🎤 Configuración del track ${index}:`, settings);
         }
-      });
-
-      // Crear peer connection
-      this.createPeerConnection();
-
-      // Esperar un momento después de obtener el stream para asegurar que esté listo
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Agregar el stream local a la conexión
-      console.log("📤 Agregando tracks al peer connection...");
-      let tracksAdded = 0;
-      this.localStream.getTracks().forEach((track) => {
-        if (this.peerConnection && this.localStream) {
-          // Verificar que el track esté activo y habilitado antes de agregarlo
-          if (track.readyState === 'live' && track.enabled) {
-            const sender = this.peerConnection.addTrack(track, this.localStream);
-            tracksAdded++;
-            console.log(`✅ Track ${track.kind} agregado al peer connection:`, {
-              trackId: track.id,
-              trackEnabled: track.enabled,
-              trackMuted: track.muted,
-              trackReadyState: track.readyState,
-              senderTrackId: sender.track?.id,
-              senderTrackEnabled: sender.track?.enabled
-            });
-          } else {
-            console.warn(`⚠️ Track ${track.kind} no está listo:`, {
-              readyState: track.readyState,
-              enabled: track.enabled,
-              muted: track.muted
-            });
-            
-            // Intentar habilitar el track
-            if (!track.enabled) {
-              track.enabled = true;
-            }
-            
-            // Esperar un momento y volver a intentar
-            setTimeout(() => {
-              if (track.readyState === 'live' && this.peerConnection && this.localStream) {
-                const sender = this.peerConnection.addTrack(track, this.localStream);
-                console.log(`✅ Track ${track.kind} agregado después de esperar:`, {
-                  trackId: track.id,
-                  senderTrackId: sender.track?.id
-                });
-              }
-            }, 200);
-          }
+        
+        // Verificar capacidades
+        if (track.getCapabilities) {
+          const capabilities = track.getCapabilities();
+          console.log(`🎤 Capacidades del track ${index}:`, capabilities);
         }
       });
       
-      console.log(`✅ Total de tracks agregados: ${tracksAdded}`);
+      // Verificar que el stream esté activo
+      console.log("🎤 Stream local:", {
+        id: this.localStream.id,
+        active: this.localStream.active,
+        tracks: this.localStream.getTracks().length
+      });
       
-      // Verificar que los tracks estén realmente en el peer connection
+      if (!this.localStream.active) {
+        console.warn("⚠️ Stream local no está activo");
+      }
+      
+      // Verificar que haya al menos un track habilitado
+      const enabledTracks = localTracks.filter(t => t.enabled && t.readyState === 'live');
+      if (enabledTracks.length === 0) {
+        console.warn("⚠️ No hay tracks de audio habilitados y activos");
+      }
+      
+      // Verificar que el micrófono esté capturando audio (no solo silencio)
+      // Crear un analyzer temporal para verificar
+      try {
+        const audioContext = new AudioContext();
+        const analyzer = audioContext.createAnalyser();
+        analyzer.fftSize = 512;
+        analyzer.smoothingTimeConstant = 0.3;
+        
+        const source = audioContext.createMediaStreamSource(this.localStream);
+        source.connect(analyzer);
+        
+        const frequencyData = new Uint8Array(analyzer.frequencyBinCount);
+        
+        // Verificar después de un momento
+        setTimeout(() => {
+          analyzer.getByteFrequencyData(frequencyData);
+          const maxFrequency = Math.max(...Array.from(frequencyData));
+          const averageFrequency = frequencyData.reduce((a, b) => a + b) / frequencyData.length;
+          
+          console.log("🎤 Verificación de captura de audio:", {
+            maxFrequency,
+            averageFrequency,
+            hasAudio: maxFrequency > 1 || averageFrequency > 0.5
+          });
+          
+          if (maxFrequency <= 1 && averageFrequency <= 0.5) {
+            console.warn("⚠️ El micrófono no parece estar capturando audio (solo silencio)");
+            console.warn("⚠️ Verifica que:");
+            console.warn("   - El micrófono no esté silenciado en el sistema");
+            console.warn("   - Estés hablando cerca del micrófono");
+            console.warn("   - El micrófono esté conectado y funcionando");
+          } else {
+            console.log("✅ El micrófono está capturando audio");
+          }
+          
+          audioContext.close();
+        }, 1000);
+      } catch (err) {
+        console.warn("⚠️ No se pudo verificar captura de audio:", err);
+      }
+      
+      // Crear peer connection
+      this.createPeerConnection();
+
+      // Agregar tracks locales al peer connection
+      let tracksAdded = 0;
+      this.localStream.getTracks().forEach((track) => {
+        if (this.peerConnection && this.localStream) {
+          const sender = this.peerConnection.addTrack(track, this.localStream);
+          tracksAdded++;
+          console.log(`✅ Track ${track.kind} agregado:`, {
+            trackId: track.id,
+            senderTrackId: sender.track?.id
+          });
+        }
+      });
+      
+      console.log(`✅ Total tracks agregados: ${tracksAdded}`);
+      
+      // Verificar senders en peer connection
       if (this.peerConnection) {
         const senders = this.peerConnection.getSenders();
         console.log("📊 Senders en peer connection:", senders.length);
@@ -220,81 +279,36 @@ export class VoiceChatService {
             console.log(`📊 Sender ${index}:`, {
               trackId: sender.track.id,
               trackKind: sender.track.kind,
-              trackEnabled: sender.track.enabled,
-              trackMuted: sender.track.muted,
-              trackReadyState: sender.track.readyState
+              trackEnabled: sender.track.enabled
             });
           }
         });
       }
 
-      // Verificar que el WebSocket esté conectado antes de suscribirse
-      console.log("🔍 Verificando conexión WebSocket...");
-      const isWsConnected = webSocketService.isWebSocketConnected();
-      console.log("🔍 WebSocket conectado:", isWsConnected);
-      
-      if (!isWsConnected) {
-        throw new Error("WebSocket no está conectado. Por favor, espera a que la conexión se establezca.");
+      // Verificar conexión WebSocket
+      if (!webSocketService.isWebSocketConnected()) {
+        throw new Error("WebSocket no está conectado");
       }
 
-      // IMPORTANTE: Asegurar que la sesión esté registrada antes de iniciar el chat de voz
-      // Esto es crítico para que el backend pueda enrutar mensajes entre jugadores
-      console.log("📝 Asegurando registro de sesión antes de iniciar chat de voz...");
+      // Registrar sesión si es necesario
       try {
         await webSocketService.registerSession();
-        console.log("✅ Sesión registrada correctamente");
       } catch (error) {
-        console.warn("⚠️ Error al registrar sesión (puede que ya esté registrada):", error);
-        // No fallar aquí, puede que la sesión ya esté registrada
+        console.warn("⚠️ Error al registrar sesión:", error);
       }
 
       // Suscribirse a mensajes de señalización
-      console.log("📡 Suscribiéndose a:", `/user/queue/webrtc/${gameId}`);
       webSocketService.subscribe(
         `/user/queue/webrtc/${gameId}`,
         this.handleSignalingMessage.bind(this)
       );
       
-      // Esperar un momento para asegurar que la suscripción se procese
       await new Promise(resolve => setTimeout(resolve, 300));
-      console.log("✅ Suscripción completada");
 
-      // Si es el iniciador, esperar un poco más antes de crear el OFFER
-      // Esto da tiempo a que ambos jugadores tengan sus sesiones registradas
-      console.log("🔍 isInitiator:", this.isInitiator);
-      console.log("🔍 IDs:", {
-        localPlayerId: this.localPlayerId,
-        remotePlayerId: this.remotePlayerId,
-        gameId: this.gameId
-      });
-      
-      // Verificar que tenemos todos los IDs necesarios
-      if (!this.localPlayerId || !this.remotePlayerId) {
-        console.error("❌ Faltan IDs necesarios para determinar el rol:", {
-          hasLocalPlayerId: !!this.localPlayerId,
-          hasRemotePlayerId: !!this.remotePlayerId
-        });
-        throw new Error("Faltan IDs de jugadores para iniciar el chat de voz");
-      }
-      
-      // Mostrar comparación para debug
-      const comparison = `${this.localPlayerId} < ${this.remotePlayerId} = ${this.localPlayerId < this.remotePlayerId}`;
-      console.log("🔍 Comparación de IDs:", comparison);
-      
+      // Si es el iniciador, crear OFFER
       if (this.isInitiator) {
-        console.log("👑 Este jugador es el INICIADOR");
-        console.log("👑 Razón: El ID local es lexicográficamente menor que el ID remoto");
-        console.log("👑 Esperando antes de crear OFFER...");
-        // Esperar un poco más para asegurar que el otro jugador también esté listo
-        // Aumentamos el delay a 1 segundo para dar más tiempo
         await new Promise(resolve => setTimeout(resolve, 1000));
-        console.log("👑 Creando OFFER...");
         await this.createOffer();
-      } else {
-        console.log("👥 Este jugador es el RECEPTOR");
-        console.log("👥 Razón: El ID local es lexicográficamente mayor que el ID remoto");
-        console.log("👥 Esperando OFFER del iniciador...");
-        console.log("👥 El otro jugador (ID menor) debe iniciar el chat de voz primero para crear el OFFER");
       }
 
       this.updateConnectionState("connecting");
@@ -321,7 +335,6 @@ export class VoiceChatService {
     // Manejar ICE candidates
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
-        console.log("🧊 ICE candidate generado");
         this.sendSignalingMessage(SignalingMessageType.ICE_CANDIDATE, event.candidate);
       }
     };
@@ -329,143 +342,185 @@ export class VoiceChatService {
     // Manejar cambios de estado de la conexión
     this.peerConnection.onconnectionstatechange = () => {
       const state = this.peerConnection?.connectionState;
-      console.log("🔄 Estado de conexión:", state);
-      console.log("🔄 Estado ICE:", this.peerConnection?.iceConnectionState);
-      console.log("🔄 Estado de señalización:", this.peerConnection?.signalingState);
+      const iceConnectionState = this.peerConnection?.iceConnectionState;
+      const iceGatheringState = this.peerConnection?.iceGatheringState;
+      const signalingState = this.peerConnection?.signalingState;
+      
+      console.log("🔄 Estado de conexión:", {
+        connectionState: state,
+        iceConnectionState,
+        iceGatheringState,
+        signalingState,
+        remoteStream: !!this.remoteStream,
+        remoteTracks: this.remoteStream?.getTracks().length || 0
+      });
       
       if (state) {
         this.updateConnectionState(state as VoiceConnectionState);
       }
       
-      // Log detallado cuando la conexión cambia
-      if (state === 'connected') {
-        console.log("✅ ========== CONEXIÓN ESTABLECIDA ==========");
-        console.log("✅ La conexión WebRTC está activa");
-        console.log("✅ El stream remoto debería llegar pronto si todo está bien");
-      } else if (state === 'failed') {
-        console.error("❌ ========== CONEXIÓN FALLIDA ==========");
-        console.error("❌ La conexión WebRTC falló");
-        console.error("❌ Posibles causas:");
-        console.error("   - Los mensajes de señalización no llegaron correctamente (problema de BACKEND)");
-        console.error("   - Los ICE candidates no se intercambiaron (problema de BACKEND o red)");
-        console.error("   - Problemas de NAT/Firewall (problema de red)");
-      } else if (state === 'disconnected') {
-        console.warn("⚠️ ========== CONEXIÓN DESCONECTADA ==========");
-        console.warn("⚠️ La conexión WebRTC se desconectó");
+      // Si la conexión está conectada pero no hay stream remoto, intentar verificar
+      if (state === 'connected' && !this.remoteStream && this.peerConnection) {
+        console.warn("⚠️ Conexión establecida pero no hay stream remoto");
+        console.warn("⚠️ Verificando transceivers...");
+        const transceivers = this.peerConnection.getTransceivers();
+        console.log("📊 Transceivers:", transceivers.length);
+        transceivers.forEach((transceiver, index) => {
+          console.log(`📊 Transceiver ${index}:`, {
+            direction: transceiver.direction,
+            currentDirection: transceiver.currentDirection,
+            receiver: !!transceiver.receiver,
+            receiverTrack: transceiver.receiver?.track ? {
+              id: transceiver.receiver.track.id,
+              kind: transceiver.receiver.track.kind,
+              enabled: transceiver.receiver.track.enabled,
+              readyState: transceiver.receiver.track.readyState
+            } : null,
+            sender: !!transceiver.sender,
+            senderTrack: transceiver.sender?.track ? {
+              id: transceiver.sender.track.id,
+              kind: transceiver.sender.track.kind
+            } : null
+          });
+          
+          // Si hay un receiver con track pero no está en el stream remoto
+          if (transceiver.receiver?.track && !this.remoteStream) {
+            console.log("📻 Encontrado track en transceiver, creando stream remoto");
+            this.remoteStream = new MediaStream([transceiver.receiver.track]);
+            if (this.onRemoteStreamCallback) {
+              setTimeout(() => {
+                if (this.remoteStream && this.onRemoteStreamCallback) {
+                  console.log("📻 Notificando stream remoto desde transceiver");
+                  this.onRemoteStreamCallback(this.remoteStream);
+                }
+              }, 100);
+            }
+          }
+        });
       }
-    };
-
-    // Log del estado ICE (crítico para el stream remoto)
-    this.peerConnection.oniceconnectionstatechange = () => {
-      const iceState = this.peerConnection?.iceConnectionState;
-      console.log("🧊 Estado ICE:", iceState);
-      
-      if (iceState === 'connected' || iceState === 'completed') {
-        console.log("✅ ========== ICE CONECTADO ==========");
-        console.log("✅ La conexión ICE está establecida");
-        console.log("✅ El stream remoto debería llegar ahora");
-      } else if (iceState === 'failed') {
-        console.error("❌ ========== ICE FALLIDO ==========");
-        console.error("❌ La conexión ICE falló");
-        console.error("❌ Esto significa que los peers no pueden conectarse directamente");
-        console.error("❌ Posibles causas:");
-        console.error("   - Los ICE candidates no se intercambiaron correctamente (BACKEND)");
-        console.error("   - Problemas de NAT traversal (red)");
-        console.error("   - Firewall bloqueando la conexión (red)");
-      } else if (iceState === 'disconnected') {
-        console.warn("⚠️ ICE desconectado - la conexión se perdió");
-      }
-    };
-
-    // Log de estado de gathering
-    this.peerConnection.onicegatheringstatechange = () => {
-      const gatheringState = this.peerConnection?.iceGatheringState;
-      console.log("🧊 Estado de gathering:", gatheringState);
     };
 
     // Manejar stream remoto
     this.peerConnection.ontrack = (event) => {
-      console.log("📻 ========== STREAM REMOTO RECIBIDO ==========");
-      console.log("📻 Track recibido:", event.track.kind, "- Enabled:", event.track.enabled);
-      console.log("📻 Streams en el evento:", event.streams.length);
-      console.log("📻 Estado de la conexión:", {
-        connectionState: this.peerConnection?.connectionState,
-        iceConnectionState: this.peerConnection?.iceConnectionState,
-        signalingState: this.peerConnection?.signalingState
+      console.log("📻 Stream remoto recibido en ontrack");
+      console.log("📻 Event info:", {
+        streams: event.streams?.length || 0,
+        track: event.track ? {
+          id: event.track.id,
+          kind: event.track.kind,
+          enabled: event.track.enabled,
+          readyState: event.track.readyState
+        } : null
       });
       
-      // Asegurarse de que tenemos un stream válido
+      // Si hay streams en el evento, usar el primero
       if (event.streams && event.streams.length > 0) {
-        this.remoteStream = event.streams[0];
-        console.log("📻 Stream remoto obtenido del array de streams");
-      } else if (event.track) {
-        // Si no hay streams pero hay un track, crear un nuevo stream
-        this.remoteStream = new MediaStream([event.track]);
-        console.log("📻 Stream creado desde track individual");
-      } else {
-        console.error("❌ No se pudo obtener stream remoto del evento");
-        console.error("❌ Evento completo:", event);
-        return;
-      }
-      
-      // Log de los tracks de audio
-      const audioTracks = this.remoteStream.getAudioTracks();
-      console.log("📻 Audio tracks en stream remoto:", audioTracks.length);
-      
-      if (audioTracks.length === 0) {
-        console.warn("⚠️ No se encontraron tracks de audio en el stream remoto");
-        console.warn("⚠️ Todos los tracks del stream:", this.remoteStream.getTracks().map(t => ({
-          kind: t.kind,
-          enabled: t.enabled,
-          readyState: t.readyState
-        })));
-      }
-      
-      audioTracks.forEach((track, index) => {
-        console.log(`📻 Audio track ${index}:`, {
-          id: track.id,
-          enabled: track.enabled,
-          muted: track.muted,
-          readyState: track.readyState,
-          label: track.label,
-          settings: track.getSettings()
+        const stream = event.streams[0];
+        console.log("📻 Usando stream del evento:", {
+          id: stream.id,
+          active: stream.active,
+          tracks: stream.getTracks().length,
+          audioTracks: stream.getAudioTracks().length
         });
         
-        // Asegurarse de que el track esté habilitado
-        if (!track.enabled) {
-          console.warn(`⚠️ Audio track ${index} está deshabilitado, habilitándolo...`);
-          track.enabled = true;
+        // Si ya tenemos un stream, agregar tracks adicionales
+        if (this.remoteStream && this.remoteStream.id !== stream.id) {
+          const existingStream = this.remoteStream;
+          stream.getTracks().forEach(track => {
+            if (!existingStream.getTrackById(track.id)) {
+              existingStream.addTrack(track);
+              console.log("📻 Track agregado al stream existente:", track.id);
+            }
+          });
+        } else {
+          this.remoteStream = stream;
         }
-        
-        // Escuchar cambios en el estado del track
-        track.onended = () => {
-          console.warn(`⚠️ Audio track ${index} terminó`);
-        };
-        
-        track.onmute = () => {
-          console.warn(`⚠️ Audio track ${index} fue silenciado`);
-        };
-        
-        track.onunmute = () => {
-          console.log(`✅ Audio track ${index} fue des-silenciado`);
-        };
-      });
-      
-      // Asegurarse de que el stream tenga tracks activos antes de llamar al callback
-      if (audioTracks.length > 0 && this.onRemoteStreamCallback) {
-        console.log("✅ Stream remoto válido con tracks de audio");
-        console.log("✅ Llamando callback de stream remoto");
-        this.onRemoteStreamCallback(this.remoteStream);
-        console.log("✅ Callback de stream remoto ejecutado");
-      } else {
-        console.warn("⚠️ No se puede notificar stream remoto: sin tracks de audio");
-        console.warn("⚠️ Estado:", {
-          hasAudioTracks: audioTracks.length > 0,
-          hasCallback: !!this.onRemoteStreamCallback
-        });
+      } else if (event.track) {
+        // Si no hay stream pero hay track, crear o agregar al stream existente
+        if (!this.remoteStream) {
+          this.remoteStream = new MediaStream([event.track]);
+          console.log("📻 Nuevo stream creado desde track");
+        } else {
+          // Agregar track al stream existente si no está ya
+          if (!this.remoteStream.getTrackById(event.track.id)) {
+            this.remoteStream.addTrack(event.track);
+            console.log("📻 Track agregado al stream existente:", event.track.id);
+          }
+        }
       }
       
-      console.log("📻 ============================================");
+      // Verificar que el stream tenga tracks de audio activos
+      if (this.remoteStream) {
+        const audioTracks = this.remoteStream.getAudioTracks();
+        const allTracks = this.remoteStream.getTracks();
+        
+        console.log("📻 Stream remoto final:", {
+          id: this.remoteStream.id,
+          active: this.remoteStream.active,
+          tracks: allTracks.length,
+          audioTracks: audioTracks.length,
+          audioTracksInfo: audioTracks.map(t => ({
+            id: t.id,
+            enabled: t.enabled,
+            muted: t.muted,
+            readyState: t.readyState,
+            label: t.label
+          })),
+          allTracksInfo: allTracks.map(t => ({
+            id: t.id,
+            kind: t.kind,
+            enabled: t.enabled,
+            muted: t.muted,
+            readyState: t.readyState
+          }))
+        });
+        
+        // Asegurar que los tracks estén habilitados
+        audioTracks.forEach(track => {
+          console.log("📻 Verificando track remoto:", {
+            id: track.id,
+            enabled: track.enabled,
+            muted: track.muted,
+            readyState: track.readyState,
+            label: track.label
+          });
+          
+          if (!track.enabled) {
+            track.enabled = true;
+            console.log("📻 Track habilitado:", track.id);
+          }
+          
+          // Nota: 'muted' es una propiedad de solo lectura que indica si el track está capturando audio
+          // Si está muted, significa que no hay audio siendo capturado/enviado
+          if (track.muted) {
+            console.warn("⚠️ Track remoto está muted - no hay audio siendo capturado/enviado");
+            console.warn("⚠️ Esto puede significar que el otro jugador no está hablando o su micrófono no funciona");
+          }
+        });
+        
+        // Verificar que haya tracks antes de notificar
+        if (audioTracks.length > 0) {
+          console.log("✅ Stream remoto tiene tracks de audio, notificando al callback");
+          if (this.onRemoteStreamCallback) {
+            console.log("📻 Notificando stream remoto al callback");
+            // Notificar de forma asíncrona para asegurar que el stream esté completamente configurado
+            setTimeout(() => {
+              if (this.remoteStream && this.onRemoteStreamCallback) {
+                console.log("📻 Ejecutando callback de stream remoto");
+                this.onRemoteStreamCallback(this.remoteStream);
+              }
+            }, 100);
+          } else {
+            console.warn("⚠️ No hay callback registrado para stream remoto");
+          }
+        } else {
+          console.warn("⚠️ Stream remoto sin tracks de audio activos");
+          console.warn("⚠️ Tracks totales:", allTracks.length);
+          console.warn("⚠️ Tracks de audio:", audioTracks.length);
+        }
+      } else {
+        console.warn("⚠️ No se pudo crear/obtener stream remoto del evento ontrack");
+      }
     };
 
     console.log("✅ Peer connection creado");
@@ -482,32 +537,25 @@ export class VoiceChatService {
 
     try {
       console.log("📤 Creando offer...");
-      console.log("📤 Estado del peer connection:", {
-        connectionState: this.peerConnection.connectionState,
-        iceConnectionState: this.peerConnection.iceConnectionState,
-        signalingState: this.peerConnection.signalingState,
-        localDescription: this.peerConnection.localDescription?.type,
-        remoteDescription: this.peerConnection.remoteDescription?.type
-      });
       
-      // Verificar que haya tracks en el peer connection antes de crear el offer
+      // Verificar que haya tracks antes de crear el offer
       const senders = this.peerConnection.getSenders();
-      console.log("📤 Senders en peer connection antes de crear offer:", senders.length);
-      senders.forEach((sender, index) => {
-        if (sender.track) {
-          console.log(`📤 Sender ${index}:`, {
-            trackId: sender.track.id,
-            trackKind: sender.track.kind,
-            trackEnabled: sender.track.enabled,
-            trackMuted: sender.track.muted,
-            trackReadyState: sender.track.readyState
-          });
-        } else {
-          console.warn(`⚠️ Sender ${index} no tiene track!`);
-        }
+      const audioSenders = senders.filter(s => s.track && s.track.kind === 'audio');
+      console.log("📤 Senders antes de crear offer:", {
+        total: senders.length,
+        audio: audioSenders.length,
+        senders: senders.map(s => ({
+          trackId: s.track?.id,
+          trackKind: s.track?.kind,
+          trackEnabled: s.track?.enabled
+        }))
       });
       
-      // Crear offer con opciones específicas para audio
+      if (audioSenders.length === 0) {
+        console.error("❌ No hay senders de audio antes de crear offer");
+        return;
+      }
+      
       const offer = await this.peerConnection.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: false,
@@ -517,49 +565,26 @@ export class VoiceChatService {
       if (offer.sdp) {
         const hasAudio = offer.sdp.includes('m=audio');
         const hasOpus = offer.sdp.includes('opus');
-        const audioLines = offer.sdp.split('\n').filter(line => 
-          line.includes('m=audio') || 
-          line.includes('opus') || 
-          line.includes('rtpmap:111') // Opus codec
-        );
-        
         console.log("📤 SDP del OFFER:", {
           hasAudio,
           hasOpus,
-          sdpLength: offer.sdp.length,
-          audioLinesCount: audioLines.length,
-          audioLines: audioLines.slice(0, 10) // Primeras 10 líneas relacionadas con audio
+          sdpLength: offer.sdp.length
         });
         
         if (!hasAudio) {
           console.error("❌ El SDP no incluye audio!");
-          console.error("❌ Esto significa que no hay tracks de audio en el peer connection");
-        } else if (!hasOpus) {
-          console.warn("⚠️ El SDP incluye audio pero no codec Opus");
-        } else {
-          console.log("✅ SDP incluye audio con codec Opus");
         }
       }
-      
-      console.log("📤 Offer creado:", {
-        type: offer.type,
-        sdpPreview: offer.sdp ? `${offer.sdp.substring(0, 200)}...` : 'sin SDP'
-      });
       
       await this.peerConnection.setLocalDescription(offer);
       console.log("✅ Local description establecida (offer)");
       
-      console.log("📤 Enviando OFFER a:", {
-        targetId: this.remotePlayerId,
-        gameId: this.gameId
-      });
-      
       this.sendSignalingMessage(SignalingMessageType.OFFER, offer);
-      console.log("✅ Offer enviado exitosamente");
+      console.log("✅ Offer enviado");
     } catch (error) {
       console.error("❌ Error al crear offer:", error);
       if (this.onErrorCallback) {
-        this.onErrorCallback(`Error al iniciar la conexión de voz: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+        this.onErrorCallback(`Error al iniciar la conexión: ${error instanceof Error ? error.message : 'Error desconocido'}`);
       }
     }
   }
@@ -575,7 +600,7 @@ export class VoiceChatService {
 
     try {
       console.log("📤 Creando answer...");
-      // Crear answer con opciones específicas para audio
+      
       const answer = await this.peerConnection.createAnswer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: false,
@@ -584,7 +609,6 @@ export class VoiceChatService {
       await this.peerConnection.setLocalDescription(answer);
       console.log("✅ Local description establecida (answer)");
       
-      // Procesar ICE candidates pendientes después de establecer la descripción local
       await this.processPendingIceCandidates();
       
       this.sendSignalingMessage(SignalingMessageType.ANSWER, answer);
@@ -592,7 +616,7 @@ export class VoiceChatService {
     } catch (error) {
       console.error("❌ Error al crear answer:", error);
       if (this.onErrorCallback) {
-        this.onErrorCallback("Error al responder la conexión de voz");
+        this.onErrorCallback("Error al responder la conexión");
       }
     }
   }
@@ -610,9 +634,8 @@ export class VoiceChatService {
     for (const candidate of this.pendingIceCandidates) {
       try {
         await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-        console.log("✅ ICE candidate pendiente agregado");
       } catch (error) {
-        console.error("❌ Error al agregar ICE candidate pendiente:", error);
+        console.error("❌ Error al agregar ICE candidate:", error);
       }
     }
     
@@ -624,70 +647,75 @@ export class VoiceChatService {
    */
   private async handleSignalingMessage(message: any): Promise<void> {
     try {
-      console.log("📨 ========== MENSAJE DE SEÑALIZACIÓN RECIBIDO ==========");
-      console.log("📨 Mensaje de señalización recibido - RAW:", message);
+      console.log("📨 Mensaje de señalización recibido:", message);
       console.log("📨 Tipo de mensaje:", message.type);
-      console.log("📨 Payload:", message.payload);
+      console.log("📨 Tiene payload:", !!message.payload);
       
-      const signalingMsg = message.payload as SignalingMessage;
-      console.log("📨 SignalingMessage procesado:", signalingMsg);
-      console.log("📨 De:", signalingMsg.senderId, "Para:", signalingMsg.targetId);
-      console.log("📨 Este jugador (local):", this.localPlayerId);
-      console.log("📨 ¿Es para este jugador?:", signalingMsg.targetId === this.localPlayerId);
-
-      if (!this.peerConnection) {
-        console.error("❌ No hay peer connection para procesar mensaje");
-        console.error("❌ Esto puede ocurrir si el chat de voz no se ha inicializado correctamente");
+      // El backend envuelve el mensaje en un objeto con type: "WEBRTC_SIGNAL"
+      // El SignalingMessage real está en message.payload
+      let signalingMsg: SignalingMessage;
+      
+      if (message.type === "WEBRTC_SIGNAL" && message.payload) {
+        // Mensaje envuelto por el backend
+        signalingMsg = message.payload as SignalingMessage;
+        console.log("📨 Mensaje desenvuelto:", {
+          type: signalingMsg.type,
+          senderId: signalingMsg.senderId,
+          targetId: signalingMsg.targetId,
+          gameId: signalingMsg.gameId
+        });
+      } else if (message.type && message.gameId) {
+        // Mensaje directo (por si acaso)
+        signalingMsg = message as SignalingMessage;
+        console.log("📨 Mensaje directo detectado");
+      } else {
+        console.error("❌ Formato de mensaje desconocido:", message);
+        console.error("❌ Estructura del mensaje:", JSON.stringify(message, null, 2));
         return;
       }
-
+      
+      if (!this.peerConnection) {
+        console.error("❌ No hay peer connection disponible");
+        return;
+      }
+      
       if (!signalingMsg || !signalingMsg.type) {
         console.error("❌ Mensaje de señalización inválido:", signalingMsg);
         return;
       }
 
       // Verificar que el mensaje sea para este jugador
+      console.log("📨 Verificando destinatario:", {
+        targetId: signalingMsg.targetId,
+        localPlayerId: this.localPlayerId,
+        match: signalingMsg.targetId === this.localPlayerId
+      });
+      
       if (signalingMsg.targetId !== this.localPlayerId) {
-        console.warn("⚠️ Mensaje de señalización no es para este jugador:", {
+        console.warn("⚠️ Mensaje no es para este jugador:", {
           targetId: signalingMsg.targetId,
           localPlayerId: this.localPlayerId
         });
         return;
       }
-
-      console.log("📨 Switch case - tipo:", signalingMsg.type);
-      console.log("📨 Estado del peer connection:", {
-        connectionState: this.peerConnection.connectionState,
-        signalingState: this.peerConnection.signalingState,
-        iceConnectionState: this.peerConnection.iceConnectionState
-      });
       
+      console.log("✅ Mensaje es para este jugador, procesando tipo:", signalingMsg.type);
+
       switch (signalingMsg.type) {
         case SignalingMessageType.OFFER:
           console.log("📥 Procesando OFFER...");
-          console.log("📥 Este jugador es el RECEPTOR - Recibiendo OFFER del iniciador");
           try {
             const offer = signalingMsg.payload as RTCSessionDescriptionInit;
             if (!offer || !offer.sdp) {
-              throw new Error("Offer inválido: falta SDP");
+              throw new Error("Offer inválido");
             }
-            
-            console.log("📥 Offer recibido:", {
-              type: offer.type,
-              sdpLength: offer.sdp?.length || 0,
-              sdpPreview: offer.sdp ? `${offer.sdp.substring(0, 100)}...` : 'sin SDP'
-            });
             
             await this.peerConnection.setRemoteDescription(
               new RTCSessionDescription(offer)
             );
             this.isRemoteDescriptionSet = true;
-            console.log("✅ Remote description establecida (OFFER)");
             
-            // Procesar ICE candidates pendientes
             await this.processPendingIceCandidates();
-            
-            console.log("📤 Creando ANSWER en respuesta al OFFER...");
             await this.createAnswer();
           } catch (error) {
             console.error("❌ Error al procesar OFFER:", error);
@@ -699,28 +727,39 @@ export class VoiceChatService {
 
         case SignalingMessageType.ANSWER:
           console.log("📥 Procesando ANSWER...");
-          console.log("📥 Este jugador es el INICIADOR - Recibiendo ANSWER del receptor");
+          console.log("📥 Estado antes de procesar ANSWER:", {
+            connectionState: this.peerConnection.connectionState,
+            signalingState: this.peerConnection.signalingState,
+            iceConnectionState: this.peerConnection.iceConnectionState,
+            hasRemoteStream: !!this.remoteStream,
+            remoteTracks: this.remoteStream?.getTracks().length || 0
+          });
+          
           try {
             const answer = signalingMsg.payload as RTCSessionDescriptionInit;
             if (!answer || !answer.sdp) {
-              throw new Error("Answer inválido: falta SDP");
+              throw new Error("Answer inválido");
             }
             
-            console.log("📥 Answer recibido:", {
+            console.log("📥 Answer SDP recibido:", {
               type: answer.type,
               sdpLength: answer.sdp?.length || 0,
-              sdpPreview: answer.sdp ? `${answer.sdp.substring(0, 100)}...` : 'sin SDP'
+              hasAudio: answer.sdp?.includes('m=audio') || false
             });
             
             await this.peerConnection.setRemoteDescription(
               new RTCSessionDescription(answer)
             );
             this.isRemoteDescriptionSet = true;
-            console.log("✅ Remote description establecida (ANSWER)");
             
-            // Procesar ICE candidates pendientes
+            console.log("✅ Remote description establecida (answer)");
+            console.log("📥 Estado después de establecer ANSWER:", {
+              connectionState: this.peerConnection.connectionState,
+              signalingState: this.peerConnection.signalingState,
+              iceConnectionState: this.peerConnection.iceConnectionState
+            });
+            
             await this.processPendingIceCandidates();
-            console.log("✅ ANSWER procesado correctamente, conexión debería establecerse pronto");
           } catch (error) {
             console.error("❌ Error al procesar ANSWER:", error);
             if (this.onErrorCallback) {
@@ -731,24 +770,34 @@ export class VoiceChatService {
 
         case SignalingMessageType.ICE_CANDIDATE:
           console.log("📥 Procesando ICE_CANDIDATE...");
+          console.log("📥 Estado antes de procesar ICE_CANDIDATE:", {
+            connectionState: this.peerConnection.connectionState,
+            signalingState: this.peerConnection.signalingState,
+            iceConnectionState: this.peerConnection.iceConnectionState,
+            isRemoteDescriptionSet: this.isRemoteDescriptionSet,
+            pendingCandidates: this.pendingIceCandidates.length
+          });
+          
           try {
             const candidate = signalingMsg.payload as RTCIceCandidateInit;
             if (!candidate) {
               throw new Error("ICE candidate inválido");
             }
+            
+            console.log("📥 ICE Candidate recibido:", {
+              candidate: candidate.candidate?.substring(0, 50) + '...',
+              sdpMid: candidate.sdpMid,
+              sdpMLineIndex: candidate.sdpMLineIndex
+            });
 
-            // Si la descripción remota aún no está establecida, guardar en cola
             if (!this.isRemoteDescriptionSet) {
-              console.log("⏳ Guardando ICE candidate en cola (descripción remota no establecida aún)");
               this.pendingIceCandidates.push(candidate);
               return;
             }
 
             await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-            console.log("✅ ICE candidate agregado");
           } catch (error) {
             console.error("❌ Error al procesar ICE_CANDIDATE:", error);
-            // No es crítico, algunos ICE candidates pueden fallar
           }
           break;
 
@@ -771,19 +820,14 @@ export class VoiceChatService {
     payload: RTCSessionDescriptionInit | RTCIceCandidateInit
   ): void {
     if (!this.gameId || !this.localPlayerId || !this.remotePlayerId) {
-      console.error("❌ Faltan datos para enviar mensaje de señalización", {
-        gameId: this.gameId,
-        localPlayerId: this.localPlayerId,
-        remotePlayerId: this.remotePlayerId
-      });
+      console.error("❌ Faltan datos para enviar mensaje");
       return;
     }
 
-    // Verificar que el WebSocket esté conectado antes de enviar
     if (!webSocketService.isWebSocketConnected()) {
-      console.error("❌ WebSocket no está conectado, no se puede enviar mensaje de señalización");
+      console.error("❌ WebSocket no está conectado");
       if (this.onErrorCallback) {
-        this.onErrorCallback("WebSocket no está conectado. Por favor, reconecta.");
+        this.onErrorCallback("WebSocket no está conectado");
       }
       return;
     }
@@ -797,31 +841,8 @@ export class VoiceChatService {
       timestamp: new Date().toISOString(),
     };
 
-    console.log(`📤 ========== ENVIANDO MENSAJE DE SEÑALIZACIÓN ==========`);
-    console.log(`📤 Tipo: ${type}`);
-    console.log(`📤 De (senderId): ${this.localPlayerId}`);
-    console.log(`📤 Para (targetId): ${this.remotePlayerId}`);
-    console.log(`📤 GameId: ${this.gameId}`);
-    console.log(`📤 Payload type: ${payload.type || 'ICE_CANDIDATE'}`);
-    console.log(`📤 Mensaje completo:`, JSON.stringify(message, null, 2));
-    console.log(`📤 =====================================================`);
-    
-    try {
-      webSocketService.send("/app/webrtc/signal", message);
-      console.log(`✅ Mensaje de señalización enviado: ${type}`);
-      console.log(`✅ El backend debería enrutar este mensaje a: ${this.remotePlayerId}`);
-      console.log(`✅ Si el receptor no lo recibe, el problema está en el BACKEND (no encuentra la sesión)`);
-      
-      // Nota: Si el backend no encuentra la sesión del jugador objetivo,
-      // el mensaje se perderá. El backend debería manejar esto mejor,
-      // pero desde el frontend solo podemos asegurar que nuestra sesión esté registrada.
-    } catch (error) {
-      console.error(`❌ Error al enviar mensaje de señalización ${type}:`, error);
-      if (this.onErrorCallback && type === SignalingMessageType.OFFER) {
-        // Solo mostrar error para OFFER, ya que es crítico
-        this.onErrorCallback(`Error al enviar ${type}. Verifica que ambos jugadores estén conectados.`);
-      }
-    }
+    console.log(`📤 Enviando mensaje de señalización: ${type}`);
+    webSocketService.send("/app/webrtc/signal", message);
   }
 
   /**
@@ -860,35 +881,176 @@ export class VoiceChatService {
     return this.remoteStream;
   }
 
+
+  /**
+   * Obtener lista de dispositivos de audio disponibles
+   */
+  public getAvailableDevices(): MediaDeviceInfo[] {
+    return this.availableDevices;
+  }
+
+  /**
+   * Obtener dispositivo actual
+   */
+  public getCurrentDeviceId(): string | null {
+    return this.currentDeviceId;
+  }
+
+  /**
+   * Cambiar dispositivo de audio
+   */
+  public async changeDevice(deviceId: string): Promise<void> {
+    if (!this.localStream) {
+      throw new Error("No hay stream local activo");
+    }
+
+    console.log("🔄 Cambiando dispositivo de audio a:", deviceId);
+    
+    // Obtener el dispositivo
+    const device = this.availableDevices.find(d => d.deviceId === deviceId);
+    if (!device) {
+      throw new Error("Dispositivo no encontrado");
+    }
+
+    // Detener tracks actuales
+    this.localStream.getAudioTracks().forEach(track => track.stop());
+
+    // Obtener nuevo stream con el dispositivo seleccionado
+    const newStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        deviceId: { exact: deviceId },
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        sampleRate: 48000,
+        channelCount: 1
+      },
+      video: false,
+    });
+
+    // Reemplazar tracks en el stream local
+    const oldTracks = this.localStream.getAudioTracks();
+    const newTracks = newStream.getAudioTracks();
+    
+    oldTracks.forEach(track => {
+      this.localStream!.removeTrack(track);
+    });
+    
+    newTracks.forEach(track => {
+      this.localStream!.addTrack(track);
+    });
+
+    // Actualizar senders en peer connection
+    if (this.peerConnection) {
+      const senders = this.peerConnection.getSenders();
+      console.log("🔄 Actualizando senders después de cambiar dispositivo:", {
+        totalSenders: senders.length,
+        audioSenders: senders.filter(s => s.track?.kind === 'audio').length
+      });
+      
+      senders.forEach((sender, index) => {
+        if (sender.track && sender.track.kind === 'audio') {
+          const newTrack = newTracks[0];
+          if (newTrack) {
+            console.log(`🔄 Reemplazando track en sender ${index}:`, {
+              oldTrackId: sender.track.id,
+              newTrackId: newTrack.id
+            });
+            sender.replaceTrack(newTrack).then(() => {
+              console.log(`✅ Track reemplazado en sender ${index}`);
+            }).catch(err => {
+              console.error(`❌ Error al reemplazar track en sender ${index}:`, err);
+            });
+          }
+        }
+      });
+      
+      // Si la conexión ya está establecida, puede ser necesario renegociar
+      const connectionState = this.peerConnection.connectionState;
+      const signalingState = this.peerConnection.signalingState;
+      console.log("🔄 Estado de conexión después de cambiar dispositivo:", {
+        connectionState,
+        signalingState
+      });
+      
+      // Si estamos en estado de negociación, necesitamos renegociar
+      if (signalingState === 'have-local-offer') {
+        console.log("⚠️ Cambio de dispositivo durante negociación (have-local-offer), renegociando...");
+        // Si somos el iniciador y ya enviamos el OFFER, necesitamos crear uno nuevo
+        if (this.isInitiator) {
+          try {
+            // Crear un nuevo OFFER con el nuevo track
+            const newOffer = await this.peerConnection.createOffer({
+              offerToReceiveAudio: true,
+              offerToReceiveVideo: false,
+            });
+            
+            await this.peerConnection.setLocalDescription(newOffer);
+            console.log("✅ Nuevo OFFER creado después de cambiar dispositivo");
+            
+            // Enviar el nuevo OFFER
+            this.sendSignalingMessage(SignalingMessageType.OFFER, newOffer);
+            console.log("✅ Nuevo OFFER enviado después de cambiar dispositivo");
+          } catch (error) {
+            console.error("❌ Error al renegociar después de cambiar dispositivo:", error);
+          }
+        }
+      } else if (signalingState === 'have-remote-offer') {
+        console.log("⚠️ Cambio de dispositivo durante negociación (have-remote-offer)");
+        // Si recibimos el OFFER pero aún no enviamos el ANSWER, el nuevo track se incluirá automáticamente
+        // Solo necesitamos crear el ANSWER de nuevo si ya lo habíamos enviado
+        if (this.isRemoteDescriptionSet) {
+          try {
+            const newAnswer = await this.peerConnection.createAnswer();
+            await this.peerConnection.setLocalDescription(newAnswer);
+            console.log("✅ Nuevo ANSWER creado después de cambiar dispositivo");
+            
+            this.sendSignalingMessage(SignalingMessageType.ANSWER, newAnswer);
+            console.log("✅ Nuevo ANSWER enviado después de cambiar dispositivo");
+          } catch (error) {
+            console.error("❌ Error al renegociar ANSWER después de cambiar dispositivo:", error);
+          }
+        }
+      } else if (connectionState === 'connected') {
+        console.log("✅ Conexión ya establecida, el cambio de track se aplicará automáticamente");
+      }
+    }
+
+    // Cerrar el stream temporal
+    newStream.getTracks().forEach(track => {
+      if (!this.localStream!.getTracks().includes(track)) {
+        track.stop();
+      }
+    });
+
+    this.currentDeviceId = deviceId;
+    console.log("✅ Dispositivo cambiado a:", device.label);
+  }
+
   /**
    * Cerrar conexión
    */
   public close(): void {
     console.log("🔌 Cerrando chat de voz...");
 
-    // Cerrar peer connection
     if (this.peerConnection) {
       this.peerConnection.close();
       this.peerConnection = null;
     }
 
-    // Detener stream local
     if (this.localStream) {
       this.localStream.getTracks().forEach((track) => track.stop());
       this.localStream = null;
     }
 
-    // Limpiar stream remoto
     if (this.remoteStream) {
       this.remoteStream.getTracks().forEach((track) => track.stop());
       this.remoteStream = null;
     }
 
-    // Limpiar cola de ICE candidates
     this.pendingIceCandidates = [];
     this.isRemoteDescriptionSet = false;
 
-    // Desuscribirse
     if (this.gameId) {
       webSocketService.unsubscribe(`/user/queue/webrtc/${this.gameId}`);
     }
@@ -924,4 +1086,3 @@ export class VoiceChatService {
 
 // Singleton
 export const voiceChatService = new VoiceChatService();
-
