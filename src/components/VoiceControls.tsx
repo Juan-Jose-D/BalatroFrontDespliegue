@@ -1,19 +1,17 @@
 import { useState } from 'react'
 import { useVoiceChat } from '../hooks/useVoiceChat'
-import type { VoiceConnectionState } from '../types/webrtc'
+import type { VoiceConnectionState } from '../types/voiceChat'
 
 interface VoiceControlsProps {
   gameId: string
-  localPlayerId: string
-  remotePlayerId: string
-  isInitiator?: boolean
+  localCognitoUsername: string
+  remoteCognitoUsername: string
 }
 
 export default function VoiceControls({
   gameId,
-  localPlayerId,
-  remotePlayerId,
-  isInitiator = false,
+  localCognitoUsername,
+  remoteCognitoUsername,
 }: VoiceControlsProps) {
   const {
     connectionState,
@@ -30,9 +28,8 @@ export default function VoiceControls({
     clearError,
   } = useVoiceChat({
     gameId,
-    localPlayerId,
-    remotePlayerId,
-    isInitiator,
+    localCognitoUsername,
+    remoteCognitoUsername,
     autoStart: false,
   })
 
@@ -92,7 +89,7 @@ export default function VoiceControls({
           zIndex: 400,
         }}
       >
-      {/* Botón minimalista del micrófono */}
+      {/* Botón del micrófono */}
       <button
         onClick={handleToggle}
         disabled={isActive && !isConnected}
@@ -166,7 +163,6 @@ export default function VoiceControls({
         </button>
       )}
 
-
       {/* Botón X solo cuando está activo */}
       {isActive && (
         <button
@@ -203,7 +199,7 @@ export default function VoiceControls({
         </button>
       )}
 
-      {/* Indicador de estado (punto pequeño) */}
+      {/* Indicador de estado */}
       {isActive && (
         <div
           title={`Estado: ${getStateText(connectionState)}`}
@@ -219,7 +215,7 @@ export default function VoiceControls({
         />
       )}
 
-      {/* Mensaje de error si hay */}
+      {/* Mensaje de error */}
       {error && (
         <div
           style={{

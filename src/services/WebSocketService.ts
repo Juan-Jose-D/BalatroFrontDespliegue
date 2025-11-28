@@ -32,18 +32,57 @@ export class WebSocketService {
 
   /**
    * Inicializar la conexión WebSocket
+   * @param playerId ID del jugador
+   * @param accessToken Token JWT de Cognito (opcional)
    */
-  public connect(playerId: string): Promise<void> {
+  public connect(playerId: string, accessToken?: string | null): Promise<void> {
+    // Si ya hay una conexión activa con el mismo playerId, reutilizarla
+    if (this.client && this.isConnected && this.playerId === playerId) {
+      console.log('✅ Ya existe una conexión WebSocket activa para este jugador, reutilizando...');
+      return Promise.resolve();
+    }
+
+    // Si hay una conexión activa pero con diferente playerId, cerrarla primero
+    if (this.client && this.isConnected) {
+      console.log('⚠️ Cerrando conexión WebSocket anterior antes de crear una nueva...');
+      this.client.deactivate().catch(err => {
+        console.warn('⚠️ Error al cerrar conexión anterior:', err);
+      });
+      this.isConnected = false;
+      this.subscriptions.clear();
+    }
+
     this.playerId = playerId;
 
     return new Promise((resolve, reject) => {
       try {
+        // Asegurar que no haya cliente anterior
+        if (this.client) {
+          try {
+            this.client.deactivate();
+          } catch (err) {
+            // Ignorar errores al desactivar cliente anterior
+          }
+          this.client = null;
+        }
+
+        const connectHeaders: Record<string, string> = {
+          playerId: playerId,
+        };
+
+        // Agregar token JWT si está disponible
+        if (accessToken) {
+          connectHeaders['Authorization'] = `Bearer ${accessToken}`;
+          console.log('🔐 Token de autenticación agregado al header Authorization');
+          console.log('🔐 Token (primeros 20 caracteres):', accessToken.substring(0, 20) + '...');
+        } else {
+          console.warn('⚠️ No se proporcionó token de autenticación. El backend puede rechazar la conexión.');
+        }
+
         this.client = new Client({
           webSocketFactory: () => new SockJS(BACKEND_WS_URL) as any,
           
-          connectHeaders: {
-            playerId: playerId,
-          },
+          connectHeaders,
 
           debug: (str) => {
             console.log("[STOMP Debug]", str);
@@ -152,6 +191,22 @@ export class WebSocketService {
             console.error("   2. El backend tenga el endpoint /ws configurado");
             console.error("   3. No haya problemas de firewall o red");
             console.error("   4. La URL del backend sea correcta:", BACKEND_WS_URL);
+            console.error("💡 Para iniciar el backend, ejecuta: mvn spring-boot:run en el directorio del backend");
+            
+            // No rechazar inmediatamente, permitir que el usuario vea el error
+            // pero no bloquear la aplicación completamente
+            const errorMessage: GameMessage = {
+              type: MessageType.ERROR,
+              gameId: null,
+              playerId: this.playerId,
+              message: "No se pudo conectar al servidor. Verifica que el backend esté corriendo en el puerto 8080.",
+              timestamp: new Date().toISOString(),
+            };
+            
+            if (this.onErrorCallback) {
+              this.onErrorCallback(errorMessage);
+            }
+            
             reject(error);
           },
         });
@@ -264,7 +319,9 @@ export class WebSocketService {
     
     if (destination === "/app/webrtc/signal" && body.targetId) {
       console.log("📡 Este es un mensaje WebRTC para:", body.targetId);
-      console.log("📡 El backend debe enrutar este mensaje a la sesión de:", body.targetId);
+      console.log("📡 El backend extraerá el senderId del Principal (username de Cognito)");
+      console.log("📡 El backend debe enrutar este mensaje a la sesión del jugador:", body.targetId);
+      console.log("📡 El targetId debe ser un username de Cognito normalizado (trim + lowercase)");
     }
     
     if (!this.client || !this.isConnected) {
@@ -300,6 +357,7 @@ export class WebSocketService {
 
   /**
    * Suscribirse a un tópico
+   * IMPORTANTE: Evita suscripciones duplicadas y limpia suscripciones anteriores del mismo tópico
    */
   public subscribe(topic: string, callback: MessageCallback): void {
     // Si no está conectado, guardar para procesar después
@@ -316,13 +374,18 @@ export class WebSocketService {
       return;
     }
 
-    // Evitar suscripciones duplicadas
+    // Si ya existe una suscripción, desuscribirse primero para evitar duplicados
     if (this.subscriptions.has(topic)) {
-      // Silenciar el warning para canales de usuario que se suscriben automáticamente
-      if (topic !== WS_TOPICS.ERRORS && topic !== WS_TOPICS.PING) {
-        console.warn(`⚠️ Ya existe una suscripción a ${topic}`);
+      console.log(`🔄 Ya existe una suscripción a ${topic}, desuscribiéndose primero...`);
+      const oldSubscription = this.subscriptions.get(topic);
+      if (oldSubscription) {
+        try {
+          oldSubscription.unsubscribe();
+        } catch (err) {
+          console.warn(`⚠️ Error al desuscribirse de ${topic}:`, err);
+        }
       }
-      return;
+      this.subscriptions.delete(topic);
     }
 
     console.log(`🔔 Suscribiéndose activamente a ${topic}...`);
@@ -333,13 +396,37 @@ export class WebSocketService {
           console.log(`📬 ========== MENSAJE RECIBIDO EN ${topic} ==========`);
           console.log(`📬 Mensaje recibido en ${topic}:`, message.body);
           console.log(`📬 Headers del mensaje:`, message.headers);
-          const parsedMessage: GameMessage = JSON.parse(message.body);
-          console.log(`📋 Mensaje parseado tipo: ${parsedMessage.type}`);
-          console.log(`📋 Mensaje completo:`, parsedMessage);
+          console.log(`📬 Destination:`, message.headers.destination || message.headers['destination']);
+          
+          // Para mensajes WebRTC, el body puede ser directamente el objeto envuelto
+          let parsedMessage: any;
+          try {
+            parsedMessage = JSON.parse(message.body);
+          } catch (parseError) {
+            console.error("❌ Error al parsear JSON:", parseError);
+            console.error("❌ Body recibido:", message.body);
+            return;
+          }
+          
+          console.log(`📋 Mensaje parseado:`, parsedMessage);
+          console.log(`📋 Tipo de mensaje:`, parsedMessage.type);
+          
+          // Si es un mensaje WebRTC, puede venir directamente como objeto
+          // o como GameMessage con type y payload
+          if (parsedMessage.type === "WEBRTC_SIGNAL" || parsedMessage.type === "OFFER" || parsedMessage.type === "ANSWER" || parsedMessage.type === "ICE_CANDIDATE") {
+            console.log(`📋 Este es un mensaje WebRTC de tipo: ${parsedMessage.type}`);
+          } else if (parsedMessage.type) {
+            console.log(`📋 Mensaje parseado tipo: ${parsedMessage.type}`);
+          }
+          
+          console.log(`📋 Llamando callback para ${topic}...`);
           callback(parsedMessage);
+          console.log(`📋 Callback ejecutado`);
           console.log(`📬 ===========================================`);
         } catch (error) {
-          console.error("❌ Error al parsear mensaje:", error, message.body);
+          console.error("❌ Error al procesar mensaje:", error);
+          console.error("❌ Body del mensaje:", message.body);
+          console.error("❌ Error completo:", error instanceof Error ? error.stack : error);
         }
       });
 

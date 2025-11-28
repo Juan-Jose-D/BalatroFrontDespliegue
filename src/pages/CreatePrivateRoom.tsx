@@ -1,14 +1,27 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useRoom } from '../hooks/useRoom'
+import { useAuth } from '../context/AuthContext'
+import { getPlayerId } from '../utils/playerId'
 import BackgroundWrapper from '../components/BackgroundWrapper'
 import background from '../assets/backgrounds/generalBackground.png'
 
 export default function CreatePrivateRoom() {
   const nav = useNavigate()
+  const { userName, isAuthenticated } = useAuth()
+  const [playerId, setPlayerId] = useState<string>('')
+  const [playerName, setPlayerName] = useState<string>('')
 
-  const [playerId] = useState(() => `player-${Math.random().toString(36).slice(2, 11)}`)
-  const [playerName] = useState(() => `Jugador-${playerId.slice(-4)}`)
+  // Obtener playerId basado en autenticación
+  useEffect(() => {
+    const initializePlayerId = async () => {
+      const id = await getPlayerId()
+      setPlayerId(id)
+      // Usar userName de Cognito si está disponible, sino usar un nombre genérico
+      setPlayerName(userName || `Jugador-${id.slice(-4)}`)
+    }
+    initializePlayerId()
+  }, [isAuthenticated, userName])
 
   const {
     isConnected,
@@ -19,14 +32,14 @@ export default function CreatePrivateRoom() {
     createRoom,
     leaveRoom,
   } = useRoom({
-    playerId,
-    playerName,
+    playerId: playerId || 'loading',
+    playerName: playerName || 'Cargando...',
     autoConnect: false,
   })
 
   // Redirigir cuando ya existe partida creada
   useEffect(() => {
-    if (!currentGame || !currentGame.gameId || !roomInfo) return
+    if (!currentGame || !currentGame.gameId || !roomInfo || !playerId || playerId === 'loading') return
 
     const params = new URLSearchParams({
       gameId: currentGame.gameId,
@@ -41,6 +54,11 @@ export default function CreatePrivateRoom() {
   }, [currentGame, nav, playerId, roomInfo])
 
   const handleCreateRoom = async () => {
+    if (!playerId || playerId === 'loading') {
+      console.warn('⚠️ Esperando playerId...')
+      return
+    }
+
     try {
       // Conectar si no está conectado
       if (!isConnected) {
@@ -87,8 +105,12 @@ export default function CreatePrivateRoom() {
         )}
 
         {!roomCode && (
-          <button className="buttonGreen" onClick={handleCreateRoom}>
-            Crear Sala
+          <button 
+            className="buttonGreen" 
+            onClick={handleCreateRoom}
+            disabled={!playerId || playerId === 'loading'}
+          >
+            {!playerId || playerId === 'loading' ? 'Cargando...' : 'Crear Sala'}
           </button>
         )}
 

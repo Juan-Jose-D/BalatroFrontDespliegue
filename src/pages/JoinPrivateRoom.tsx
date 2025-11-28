@@ -1,16 +1,30 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useRoom } from '../hooks/useRoom'
+import { useAuth } from '../context/AuthContext'
+import { getPlayerId } from '../utils/playerId'
 import BackgroundWrapper from '../components/BackgroundWrapper'
 import background from '../assets/backgrounds/generalBackground.png'
 
 export default function JoinPrivateRoom() {
   const nav = useNavigate()
+  const { userName, isAuthenticated } = useAuth()
+  const [playerId, setPlayerId] = useState<string>('')
+  const [playerName, setPlayerName] = useState<string>('')
 
-  const [playerId] = useState(() => `player-${Math.random().toString(36).slice(2, 11)}`)
-  const [playerName] = useState(() => `Jugador-${playerId.slice(-4)}`)
+  // Obtener playerId basado en autenticación
+  useEffect(() => {
+    const initializePlayerId = async () => {
+      const id = await getPlayerId()
+      setPlayerId(id)
+      // Usar userName de Cognito si está disponible, sino usar un nombre genérico
+      setPlayerName(userName || `Jugador-${id.slice(-4)}`)
+    }
+    initializePlayerId()
+  }, [isAuthenticated, userName])
   const [codeInput, setCodeInput] = useState('')
   const [isJoining, setIsJoining] = useState(false)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const {
     isConnected,
@@ -20,14 +34,14 @@ export default function JoinPrivateRoom() {
     joinRoom,
     clearError,
   } = useRoom({
-    playerId,
-    playerName,
+    playerId: playerId || 'loading',
+    playerName: playerName || 'Cargando...',
     autoConnect: false,
   })
 
   // Redirigir si ya existe partida
   useEffect(() => {
-    if (!currentGame?.gameId) return
+    if (!currentGame?.gameId || !playerId || playerId === 'loading') return
 
     const params = new URLSearchParams({
       gameId: currentGame.gameId,
@@ -46,20 +60,42 @@ export default function JoinPrivateRoom() {
     if (isConnected && error) clearError()
   }, [isConnected, error, clearError])
 
-  // Resetear isJoining cuando hay un error
+  // Resetear isJoining cuando hay un error o cuando se une exitosamente
   useEffect(() => {
     if (error) {
       setIsJoining(false)
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
     }
   }, [error])
 
+  // Limpiar timeout cuando se une exitosamente
+  useEffect(() => {
+    if (currentGame?.gameId) {
+      setIsJoining(false)
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
+    }
+  }, [currentGame])
+
   const handleJoinRoom = async () => {
+    if (!playerId || playerId === 'loading') {
+      console.warn('⚠️ Esperando playerId...')
+      return
+    }
+
     if (codeInput.length < 5) {
       console.log('⚠️ Código muy corto:', codeInput.length)
       return // Mínimo 5 caracteres
     }
 
-    console.log('🚀 Intentando unirse con código:', codeInput)
+    console.log('🚀 ========== INICIANDO PROCESO DE UNIÓN ==========')
+    console.log('🚀 Código:', codeInput)
+    console.log('🚀 PlayerId:', playerId)
     setIsJoining(true)
 
     try {
@@ -67,23 +103,45 @@ export default function JoinPrivateRoom() {
       if (!isConnected) {
         console.log('📡 Conectando al servidor...')
         await connect()
-        // Esperar un poco para que la conexión se estabilice
-        await new Promise(resolve => setTimeout(resolve, 500))
-        console.log('✅ Conectado')
+        // Esperar un poco para que la conexión se estabilice Y los callbacks se registren
+        console.log('⏳ Esperando estabilización de conexión y registro de callbacks...')
+        await new Promise(resolve => setTimeout(resolve, 1000)) // Aumentado a 1 segundo
+        console.log('✅ Conectado y callbacks deberían estar registrados')
+      } else {
+        console.log('✅ Ya conectado, verificando callbacks...')
+        // Dar tiempo para que los callbacks se registren si aún no lo están
+        await new Promise(resolve => setTimeout(resolve, 200))
       }
       
-      // Unirse a la sala
-      console.log('🚪 Uniéndose a sala:', codeInput)
-      joinRoom(codeInput)
+      // Limpiar timeout anterior si existe
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
       
-      // Timeout de seguridad: si no hay respuesta en 5 segundos, resetear el estado
-      setTimeout(() => {
-        setIsJoining(false)
-        console.log('⏱️ Timeout: No se recibió respuesta del servidor')
-      }, 5000)
+      // Normalizar el código antes de unirse (mayúsculas, sin espacios)
+      const normalizedCode = codeInput.trim().toUpperCase();
+      console.log('🚪 Código original:', codeInput);
+      console.log('🚪 Código normalizado:', normalizedCode);
+      console.log('🚪 Uniéndose a sala con código normalizado:', normalizedCode);
+      joinRoom(normalizedCode)
+      console.log('✅ Llamada a joinRoom completada')
+      
+      // Timeout de seguridad: si no hay respuesta en 10 segundos, resetear el estado
+      timeoutRef.current = setTimeout(() => {
+        if (isJoining) {
+          setIsJoining(false)
+          console.log('⏱️ Timeout: No se recibió respuesta del servidor después de 10 segundos')
+        }
+      }, 10000)
+      console.log('🚀 ==========================================')
     } catch (err) {
       console.error('❌ Error al unirse:', err)
       setIsJoining(false)
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+        timeoutRef.current = null
+      }
     }
   }
 
@@ -138,9 +196,13 @@ export default function JoinPrivateRoom() {
         <button
           className="buttonGreen"
           onClick={handleJoinRoom}
-          disabled={codeInput.length < 5 || isJoining}
+          disabled={codeInput.length < 5 || isJoining || !playerId || playerId === 'loading'}
         >
-          {isJoining ? 'Uniéndose...' : 'Unirse'}
+          {!playerId || playerId === 'loading'
+            ? 'Cargando...'
+            : isJoining
+            ? 'Uniéndose...'
+            : 'Unirse'}
         </button>
 
         <button className="buttonRed" onClick={handleCancel}>

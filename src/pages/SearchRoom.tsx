@@ -1,15 +1,25 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWebSocket } from '../hooks/useWebSocket'
+import { useAuth } from '../context/AuthContext'
+import { getPlayerId } from '../utils/playerId'
 import BackgroundWrapper from '../components/BackgroundWrapper'
 import background from '../assets/backgrounds/generalBackground.png'
 
 export default function CreateRoom() {
   const nav = useNavigate()
+  const { user, isAuthenticated } = useAuth()
 
-  const [playerId] = useState(
-    () => `player-${Math.random().toString(36).substr(2, 9)}`
-  )
+  const [playerId, setPlayerId] = useState<string>('')
+
+  // Obtener playerId basado en autenticación
+  useEffect(() => {
+    const initializePlayerId = async () => {
+      const id = await getPlayerId()
+      setPlayerId(id)
+    }
+    initializePlayerId()
+  }, [isAuthenticated, user])
   const [isConnecting, setIsConnecting] = useState(false)
 
   const {
@@ -21,13 +31,13 @@ export default function CreateRoom() {
     joinQueue,
     leaveQueue,
   } = useWebSocket({
-    playerId,
+    playerId: playerId || 'loading', // Usar 'loading' temporalmente si aún no se ha cargado
     autoConnect: false,
   })
 
   // Redirige cuando se encuentra partida
   useEffect(() => {
-    if (!currentMatch) return
+    if (!currentMatch || !playerId) return
 
     const params = new URLSearchParams({
       gameId: currentMatch.gameId,
@@ -43,6 +53,11 @@ export default function CreateRoom() {
 
   // Inicia matchmaking
   const handleStartMatchmaking = async () => {
+    if (!playerId || playerId === 'loading') {
+      console.warn('⚠️ Esperando playerId...')
+      return
+    }
+
     if (!isConnected) {
       setIsConnecting(true)
       try {
@@ -93,9 +108,11 @@ export default function CreateRoom() {
           <button
             className="buttonGreen"
             onClick={handleStartMatchmaking}
-            disabled={isConnecting}
+            disabled={isConnecting || !playerId || playerId === 'loading'}
           >
-            {isConnecting
+            {!playerId || playerId === 'loading'
+              ? 'Cargando...'
+              : isConnecting
               ? 'Conectando...'
               : isConnected
               ? 'Buscar Partida'

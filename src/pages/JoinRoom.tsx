@@ -1,16 +1,23 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWebSocket } from '../hooks/useWebSocket'
+import { getPlayerId } from '../utils/playerId'
 import Button from '../components/Button'
 import BackgroundWrapper from '../components/BackgroundWrapper'
 import background from '../assets/backgrounds/generalBackground.png'
 
 export default function JoinRoom() {
   const nav = useNavigate()
+  const [playerId, setPlayerId] = useState<string>('')
 
-  const [playerId] = useState(() =>
-    `player-${Math.random().toString(36).slice(2, 11)}`
-  )
+  // Obtener playerId basado en autenticación
+  useEffect(() => {
+    const initializePlayerId = async () => {
+      const id = await getPlayerId()
+      setPlayerId(id)
+    }
+    initializePlayerId()
+  }, [])
 
   const {
     isConnected,
@@ -22,13 +29,13 @@ export default function JoinRoom() {
     joinQueue,
     leaveQueue,
   } = useWebSocket({
-    playerId,
+    playerId: playerId || 'loading',
     autoConnect: false,
   })
 
   // Navegar cuando hay partida
   useEffect(() => {
-    if (currentMatch) {
+    if (currentMatch && playerId && playerId !== 'loading') {
       const params = new URLSearchParams({
         gameId: currentMatch.gameId,
         playerId: playerId,
@@ -40,6 +47,11 @@ export default function JoinRoom() {
   }, [currentMatch, nav, playerId])
 
   const handleStartMatchmaking = async () => {
+    if (!playerId || playerId === 'loading') {
+      console.warn('⚠️ Esperando playerId...')
+      return
+    }
+
     try {
       if (!isConnected) {
         await connect()
@@ -110,8 +122,13 @@ export default function JoinRoom() {
               variant="primary"
               className="btn btnPrimary"
               onClick={handleStartMatchmaking}
+              disabled={!playerId || playerId === 'loading'}
             >
-              {isConnected ? 'Buscar Partida' : 'Conectar y Buscar'}
+              {!playerId || playerId === 'loading'
+                ? 'Cargando...'
+                : isConnected
+                ? 'Buscar Partida'
+                : 'Conectar y Buscar'}
             </Button>
           )}
         </div>

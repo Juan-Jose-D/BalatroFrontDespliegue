@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useAuth } from "../context/AuthContext";
 import { webSocketService } from "../services/WebSocketService";
 import { matchmakingService } from "../services/MatchmakingService";
 import { gameMessageService } from "../services/GameMessageService";
@@ -19,6 +20,7 @@ interface UseWebSocketOptions {
 
 export const useWebSocket = (options: UseWebSocketOptions) => {
   const { playerId, autoConnect = true } = options;
+  const { getAccessToken, isAuthenticated } = useAuth();
   
   const [isConnected, setIsConnected] = useState(false);
   const [isInQueue, setIsInQueue] = useState(false);
@@ -42,7 +44,26 @@ export const useWebSocket = (options: UseWebSocketOptions) => {
     setError(null);
 
     try {
-      await webSocketService.connect(playerId);
+      // Obtener token JWT si el usuario está autenticado
+      let accessToken: string | null = null;
+      if (isAuthenticated) {
+        try {
+          accessToken = await getAccessToken();
+          if (accessToken) {
+            console.log('🔐 Token obtenido correctamente para WebSocket');
+            console.log('🔐 Token (primeros 20 caracteres):', accessToken.substring(0, 20) + '...');
+          } else {
+            console.warn('⚠️ No se pudo obtener el token de acceso. Intentando conectar sin autenticación.');
+          }
+        } catch (tokenError) {
+          console.error('❌ Error al obtener token:', tokenError);
+          console.warn('⚠️ Intentando conectar sin autenticación.');
+        }
+      } else {
+        console.warn('⚠️ Usuario no autenticado. Conectando sin token.');
+      }
+
+      await webSocketService.connect(playerId, accessToken);
       setIsConnected(true);
       console.log("✅ Conectado al servidor");
     } catch (err) {
@@ -52,7 +73,7 @@ export const useWebSocket = (options: UseWebSocketOptions) => {
     } finally {
       isConnecting.current = false;
     }
-  }, [playerId, isConnected]);
+  }, [playerId, isConnected, isAuthenticated, getAccessToken]);
 
   /**
    * Desconectar del servidor

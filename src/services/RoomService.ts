@@ -37,19 +37,24 @@ export class RoomService {
       return;
     }
 
-    console.log("🏠 Creando sala privada...");
+    console.log("🏠 ========== CREANDO SALA PRIVADA ==========");
+    console.log("🏠 PlayerId:", playerId);
+    console.log("🏠 PlayerName:", playerName);
 
     // Suscribirse al tópico de salas
+    console.log("🔔 Suscribiéndose a:", WS_TOPICS.ROOM);
     webSocketService.subscribe(WS_TOPICS.ROOM, this.handleRoomMessage.bind(this));
+    console.log("✅ Suscrito a tópico de salas");
 
-    // Generar código de sala de 6 caracteres
-    const roomCode = this.generateRoomCode();
+    // Generar código de sala de 6 caracteres y normalizarlo a mayúsculas
+    const roomCode = this.generateRoomCode().toUpperCase();
     console.log("🔑 Código generado:", roomCode);
+    console.log("🔑 Código normalizado (mayúsculas):", roomCode);
 
     const createRoomDto: CreateRoomDto = {
       playerId,
       playerName,
-      roomCode,
+      roomCode, // Ya está en mayúsculas
       isPrivate: true,
     };
 
@@ -62,10 +67,13 @@ export class RoomService {
       timestamp: new Date().toISOString(),
     };
 
-    console.log("📤 Enviando CREATE_ROOM:", JSON.stringify(message, null, 2));
+    console.log("📤 Enviando CREATE_ROOM a:", WS_DESTINATIONS.CREATE_ROOM);
+    console.log("📤 Mensaje completo:", JSON.stringify(message, null, 2));
     webSocketService.send(WS_DESTINATIONS.CREATE_ROOM, message);
     this.isHost = true;
     this.currentRoomCode = roomCode;
+    console.log("✅ Mensaje CREATE_ROOM enviado, esperando respuesta del backend...");
+    console.log("🏠 ==========================================");
   }
 
   /**
@@ -80,13 +88,17 @@ export class RoomService {
       return;
     }
 
+    // Normalizar el código a mayúsculas para consistencia con el backend
+    const normalizedRoomCode = roomCode.trim().toUpperCase();
     console.log(`🚪 Uniéndose a sala con código: ${roomCode}...`);
+    console.log(`🔑 Código original: "${roomCode}"`);
+    console.log(`🔑 Código normalizado (mayúsculas): "${normalizedRoomCode}"`);
 
     // Suscribirse al tópico de salas
     webSocketService.subscribe(WS_TOPICS.ROOM, this.handleRoomMessage.bind(this));
 
     const joinRoomDto: JoinRoomDto = {
-      roomCode: roomCode.toUpperCase(),
+      roomCode: normalizedRoomCode,
       playerId,
       playerName,
     };
@@ -101,10 +113,12 @@ export class RoomService {
     };
 
     console.log("📤 Enviando JOIN_ROOM:", JSON.stringify(message, null, 2));
+    console.log("📤 Código de sala en el mensaje:", normalizedRoomCode);
     webSocketService.send(WS_DESTINATIONS.JOIN_ROOM, message);
     this.isHost = false;
-    this.currentRoomCode = roomCode.toUpperCase();
+    this.currentRoomCode = normalizedRoomCode;
     console.log("✅ Mensaje JOIN_ROOM enviado, esperando respuesta del backend...");
+    console.log("✅ Código de sala almacenado:", this.currentRoomCode);
   }
 
   /**
@@ -139,30 +153,97 @@ export class RoomService {
    * Manejar mensajes de sala
    */
   private handleRoomMessage(message: GameMessage): void {
-    console.log("📨 Mensaje de sala recibido:", message.type);
-    console.log("📦 Payload completo:", JSON.stringify(message, null, 2));
+    console.log("📨 ========== MENSAJE DE SALA RECIBIDO ==========");
+    console.log("📨 Tipo:", message.type);
+    console.log("📨 Payload completo:", JSON.stringify(message, null, 2));
+    console.log("📨 Tiene payload:", !!message.payload);
+    console.log("📨 Tiene callback:", !!this.onRoomCreatedCallback);
 
     switch (message.type) {
       case MessageType.CREATE_ROOM:
       case MessageType.ROOM_CREATED:
         // Sala creada exitosamente - el backend envía RoomInfoDto
-        if (message.payload && this.onRoomCreatedCallback) {
-          const roomData = message.payload as RoomInfoDto;
-          this.currentRoomCode = roomData.roomCode;
-          console.log(`🏠 Sala creada con código: ${roomData.roomCode}`);
-          this.onRoomCreatedCallback(roomData);
+        console.log("🏠 Procesando respuesta de creación de sala...");
+        if (message.payload) {
+          try {
+            const roomData = message.payload as RoomInfoDto;
+            console.log("🏠 Datos de sala recibidos:", roomData);
+            this.currentRoomCode = roomData.roomCode;
+            console.log(`🏠 Sala creada con código: ${roomData.roomCode}`);
+            
+            if (this.onRoomCreatedCallback) {
+              console.log("🏠 Llamando callback onRoomCreated...");
+              this.onRoomCreatedCallback(roomData);
+              console.log("✅ Callback ejecutado");
+            } else {
+              console.warn("⚠️ No hay callback registrado para onRoomCreated");
+            }
+          } catch (error) {
+            console.error("❌ Error al procesar datos de sala:", error);
+            if (this.onErrorCallback) {
+              this.onErrorCallback(`Error al procesar respuesta de sala: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+            }
+          }
+        } else {
+          console.warn("⚠️ Mensaje CREATE_ROOM/ROOM_CREATED sin payload");
         }
+        console.log("📨 ==========================================");
         break;
 
       case MessageType.JOIN_ROOM:
       case MessageType.ROOM_JOINED:
         // Unión a sala exitosa (ambos jugadores reciben esto)
-        if (message.payload && this.onRoomJoinedCallback) {
-          const roomData = message.payload as RoomInfoDto;
-          this.currentRoomCode = roomData.roomCode;
-          console.log(`🎮 Sala iniciada: ${roomData.roomCode}, Game: ${roomData.gameId}`);
-          this.onRoomJoinedCallback(roomData);
+        console.log("🎮 ========== PROCESANDO RESPUESTA DE UNIÓN A SALA ==========");
+        console.log("🎮 Procesando respuesta de unión a sala...");
+        console.log("🎮 Tiene payload:", !!message.payload);
+        console.log("🎮 Tiene callback:", !!this.onRoomJoinedCallback);
+        
+        if (message.payload) {
+          try {
+            const roomData = message.payload as RoomInfoDto;
+            console.log("🎮 Datos de sala recibidos:", roomData);
+            this.currentRoomCode = roomData.roomCode;
+            console.log(`🎮 Sala iniciada: ${roomData.roomCode}, Game: ${roomData.gameId}`);
+            
+            if (this.onRoomJoinedCallback) {
+              console.log("🎮 Llamando callback onRoomJoined...");
+              try {
+                this.onRoomJoinedCallback(roomData);
+                console.log("✅ Callback ejecutado exitosamente");
+              } catch (callbackError) {
+                console.error("❌ Error al ejecutar callback onRoomJoined:", callbackError);
+                console.error("❌ Stack trace:", callbackError instanceof Error ? callbackError.stack : 'N/A');
+                if (this.onErrorCallback) {
+                  this.onErrorCallback(`Error al ejecutar callback: ${callbackError instanceof Error ? callbackError.message : 'Error desconocido'}`);
+                }
+              }
+            } else {
+              console.error("❌ ========== ERROR CRÍTICO ==========");
+              console.error("❌ No hay callback registrado para onRoomJoined");
+              console.error("❌ Esto significa que el callback no se registró antes de recibir el mensaje");
+              console.error("❌ Verifica que el useEffect que registra los callbacks se ejecute antes de joinRoom");
+              console.error("❌ Estado actual de callbacks:");
+              console.error("❌   - onRoomCreatedCallback:", !!this.onRoomCreatedCallback);
+              console.error("❌   - onRoomJoinedCallback:", !!this.onRoomJoinedCallback);
+              console.error("❌   - onErrorCallback:", !!this.onErrorCallback);
+              console.error("❌ ==========================================");
+              
+              // Intentar usar el callback de error para notificar al usuario
+              if (this.onErrorCallback) {
+                this.onErrorCallback("Error: callback no registrado. Intenta unirte de nuevo.");
+              }
+            }
+          } catch (error) {
+            console.error("❌ Error al procesar datos de sala:", error);
+            if (this.onErrorCallback) {
+              this.onErrorCallback(`Error al procesar respuesta de sala: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+            }
+          }
+        } else {
+          console.warn("⚠️ Mensaje JOIN_ROOM/ROOM_JOINED sin payload");
+          console.warn("⚠️ Mensaje completo:", JSON.stringify(message, null, 2));
         }
+        console.log("🎮 ==========================================");
         break;
 
       case MessageType.ROOM_FULL:
@@ -230,14 +311,24 @@ export class RoomService {
    * Registrar callback cuando se crea una sala
    */
   public onRoomCreated(callback: RoomCreatedCallback): void {
+    console.log("🔧 ========== REGISTRANDO CALLBACK onRoomCreated ==========");
+    console.log("🔧 Callback anterior:", !!this.onRoomCreatedCallback);
     this.onRoomCreatedCallback = callback;
+    console.log("🔧 Callback nuevo:", !!this.onRoomCreatedCallback);
+    console.log("✅ Callback onRoomCreated registrado exitosamente");
+    console.log("🔧 ==========================================");
   }
 
   /**
    * Registrar callback cuando se une a una sala
    */
   public onRoomJoined(callback: RoomJoinedCallback): void {
+    console.log("🔧 ========== REGISTRANDO CALLBACK onRoomJoined ==========");
+    console.log("🔧 Callback anterior:", !!this.onRoomJoinedCallback);
     this.onRoomJoinedCallback = callback;
+    console.log("🔧 Callback nuevo:", !!this.onRoomJoinedCallback);
+    console.log("✅ Callback onRoomJoined registrado exitosamente");
+    console.log("🔧 ==========================================");
   }
 
   /**

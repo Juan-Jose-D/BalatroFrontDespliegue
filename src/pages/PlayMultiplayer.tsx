@@ -16,6 +16,8 @@ import { createJokerInstance } from '../utils/jokerEffects'
 import { calculateInterest } from '../utils/shopLogic'
 import { calculateAllCardEffects } from '../utils/cardEnhancements'
 import { webSocketService } from '../services/WebSocketService'
+import { useAuth } from '../context/AuthContext'
+import { getPlayerId } from '../utils/playerId'
 import type { ShopItem } from '../types/shop'
 
 function PlayMultiplayerGame() {
@@ -44,43 +46,60 @@ function PlayMultiplayerGame() {
     lastOpponentAction
   } = useGameMultiplayer()
   
-  // Obtener gameId y determinar IDs de jugadores para chat de voz
+  const { isAuthenticated } = useAuth()
+  const [localCognitoUsername, setLocalCognitoUsername] = useState<string>('')
+  const [remoteCognitoUsername, setRemoteCognitoUsername] = useState<string>('')
+  
+  // Obtener gameId
   const gameId = searchParams.get('gameId') || contextGameId || game?.id || ''
   
-  // Usar opponentId del contexto que ya existe y funciona
-  const remotePlayerId = opponentId
-  
-  // Determinar quién es el iniciador basado en los IDs
-  // El jugador con el ID "menor" lexicográficamente será el iniciador
-  // Esto asegura que ambos jugadores lleguen a la misma conclusión
-  const isInitiator = playerId && remotePlayerId ? playerId < remotePlayerId : false
-  
-  // Log detallado para debug de IDs de voz
+  // Obtener username de Cognito del jugador local
   useEffect(() => {
-    const comparison = playerId && remotePlayerId 
-      ? `${playerId} < ${remotePlayerId} = ${playerId < remotePlayerId}`
-      : 'No se puede comparar (faltan IDs)'
-    
-    console.log('🎤 Voice Chat IDs:', { 
-      gameId, 
-      playerId, 
-      remotePlayerId, 
-      isInitiator,
-      comparison,
-      hasAllIds: !!(gameId && playerId && remotePlayerId),
-      playerIdType: typeof playerId,
-      remotePlayerIdType: typeof remotePlayerId
-    })
-    
-    if (!playerId || !remotePlayerId) {
-      console.warn('⚠️ Faltan IDs para determinar el iniciador:', {
-        hasPlayerId: !!playerId,
-        hasRemotePlayerId: !!remotePlayerId
-      })
-    } else {
-      console.log(`🎤 Rol determinado: ${isInitiator ? '👑 INICIADOR' : '👥 RECEPTOR'}`)
+    const initializeCognitoUsernames = async () => {
+      if (isAuthenticated) {
+        try {
+          const cognitoUsername = await getPlayerId()
+          setLocalCognitoUsername(cognitoUsername)
+          console.log('✅ Username de Cognito local obtenido:', cognitoUsername)
+        } catch (error) {
+          console.error('❌ Error al obtener username de Cognito:', error)
+        }
+      }
     }
-  }, [gameId, playerId, remotePlayerId, isInitiator])
+    initializeCognitoUsernames()
+  }, [isAuthenticated])
+  
+  // Obtener username de Cognito del oponente
+  // IMPORTANTE: El opponentId debe ser el username de Cognito, no un UUID
+  useEffect(() => {
+    if (opponentId) {
+      // Verificar que opponentId sea un username de Cognito válido
+      const isCognitoUsername = !opponentId.startsWith('player-') && 
+                                !opponentId.startsWith('opponent-') &&
+                                !opponentId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+      
+      if (isCognitoUsername) {
+        setRemoteCognitoUsername(opponentId)
+        console.log('✅ Username de Cognito remoto obtenido:', opponentId)
+      } else {
+        console.warn('⚠️ ADVERTENCIA: opponentId no es un username de Cognito válido:', opponentId)
+        console.warn('⚠️ El chat de voz requiere que el backend envíe usernames de Cognito en lugar de UUIDs')
+        setRemoteCognitoUsername('')
+      }
+    }
+  }, [opponentId])
+  
+  // Log para debug
+  useEffect(() => {
+    if (gameId && localCognitoUsername && remoteCognitoUsername) {
+      console.log('🎤 Chat de Voz - Configuración:', {
+        gameId,
+        localCognitoUsername,
+        remoteCognitoUsername,
+        ambosUsernamesValidos: !!(localCognitoUsername && remoteCognitoUsername)
+      })
+    }
+  }, [gameId, localCognitoUsername, remoteCognitoUsername])
   
   // Verificar si el WebSocket está conectado
   const [isConnected, setIsConnected] = useState(false)
@@ -296,12 +315,11 @@ function PlayMultiplayerGame() {
   return (
     <BackgroundWrapper image={playBg}>
       {/* Controles de Chat de Voz */}
-      {gameId && playerId && remotePlayerId && (
+      {gameId && localCognitoUsername && remoteCognitoUsername && (
         <VoiceControls
           gameId={gameId}
-          localPlayerId={playerId}
-          remotePlayerId={remotePlayerId}
-          isInitiator={isInitiator}
+          localCognitoUsername={localCognitoUsername}
+          remoteCognitoUsername={remoteCognitoUsername}
         />
       )}
 

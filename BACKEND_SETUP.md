@@ -54,6 +54,18 @@ Una vez que veas:
 
 En la consola del navegador, el backend está funcionando correctamente.
 
+## 🎤 Chat de Voz WebRTC
+
+Para que el chat de voz funcione correctamente, el backend debe implementar los endpoints y la lógica descritos en:
+
+**📄 [BACKEND_WEBRTC_REQUIREMENTS.md](./BACKEND_WEBRTC_REQUIREMENTS.md)**
+
+Este documento contiene:
+- Endpoints requeridos (`/app/session/register` y `/app/webrtc/signal`)
+- Formato de mensajes esperado
+- Lógica de normalización de playerIds
+- Implementación sugerida en Java/Spring Boot
+
 
 
 

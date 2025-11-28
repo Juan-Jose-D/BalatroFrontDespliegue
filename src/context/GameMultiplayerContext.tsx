@@ -5,6 +5,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react'
 import { GameProvider, useGame } from './GameContext'
+import { useAuth } from './AuthContext'
 import type { GameMessage } from '../types/backend'
 import { gameMessageService } from '../services/GameMessageService'
 import { webSocketService } from '../services/WebSocketService'
@@ -54,6 +55,7 @@ function GameMultiplayerProviderInner({
   opponentName = 'Oponente'
 }: GameMultiplayerProviderProps) {
   const game = useGame()
+  const { getAccessToken, isAuthenticated } = useAuth()
   
   // Estado del oponente
   const [opponentScore, setOpponentScore] = useState(0)
@@ -71,28 +73,70 @@ function GameMultiplayerProviderInner({
   const [isWebSocketReady, setIsWebSocketReady] = useState(false)
 
   // Conectar WebSocket al montar
+  // IMPORTANTE: Solo crear una conexión WebSocket por usuario
   useEffect(() => {
+    let isMounted = true;
+    
     const connectWebSocket = async () => {
       try {
-        // Si ya está conectado, marcar como listo
+        // Si ya está conectado con el mismo playerId, reutilizar la conexión
         if (webSocketService.isWebSocketConnected()) {
-          console.log('✅ WebSocket ya está conectado')
-          setIsWebSocketReady(true)
-          return
+          const currentPlayerId = webSocketService.getPlayerId();
+          if (currentPlayerId === playerId) {
+            console.log('✅ WebSocket ya está conectado para este jugador, reutilizando conexión');
+            setIsWebSocketReady(true);
+            return;
+          } else {
+            console.log('⚠️ WebSocket conectado pero con diferente playerId, cerrando conexión anterior...');
+            await webSocketService.disconnect();
+            // Esperar un momento antes de crear nueva conexión
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
         }
         
-        // Si no está conectado, conectar
-        console.log('🔌 Conectando WebSocket...')
-        await webSocketService.connect(playerId)
-        setIsWebSocketReady(true)
-        console.log('✅ WebSocket conectado y listo')
+        // Si no está conectado, conectar con autenticación
+        console.log('🔌 Conectando WebSocket...');
+        
+        // Obtener token JWT si el usuario está autenticado
+        let accessToken: string | null = null;
+        if (isAuthenticated) {
+          try {
+            accessToken = await getAccessToken();
+            if (accessToken) {
+              console.log('🔐 Token obtenido correctamente para WebSocket en GameMultiplayerContext');
+              console.log('🔐 Token (primeros 20 caracteres):', accessToken.substring(0, 20) + '...');
+            } else {
+              console.warn('⚠️ No se pudo obtener el token de acceso. Intentando conectar sin autenticación.');
+            }
+          } catch (tokenError) {
+            console.error('❌ Error al obtener token:', tokenError);
+            console.warn('⚠️ Intentando conectar sin autenticación.');
+          }
+        } else {
+          console.warn('⚠️ Usuario no autenticado. Conectando sin token.');
+        }
+        
+        await webSocketService.connect(playerId, accessToken);
+        
+        if (isMounted) {
+          setIsWebSocketReady(true);
+          console.log('✅ WebSocket conectado y listo');
+        }
       } catch (error) {
-        console.error('❌ Error al conectar WebSocket:', error)
+        console.error('❌ Error al conectar WebSocket:', error);
+        if (isMounted) {
+          setIsWebSocketReady(false);
+        }
       }
     }
     
-    connectWebSocket()
-  }, [playerId])
+    connectWebSocket();
+    
+    // Cleanup: no desconectar aquí porque otros componentes pueden estar usando la misma conexión
+    return () => {
+      isMounted = false;
+    };
+  }, [playerId, isAuthenticated, getAccessToken])
 
   // Unirse al juego SOLO cuando el WebSocket esté listo
   useEffect(() => {
