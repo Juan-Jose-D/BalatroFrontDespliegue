@@ -14,14 +14,14 @@ const isDevelopment = import.meta.env.MODE === "development";
 
 
 const developmentConfig: BackendConfig = {
-  baseUrl: "http://localhost:8080",
+  baseUrl: "http://balatro-alb-1252182129.us-east-1.elb.amazonaws.com",
   wsEndpoint: "/ws",
   useSockJS: true,
 };
 
 
 const productionConfig: BackendConfig = {
-  baseUrl: import.meta.env.VITE_BACKEND_URL || "http://localhost:8080",
+  baseUrl: import.meta.env.VITE_BACKEND_URL || "http://balatro-alb-1252182129.us-east-1.elb.amazonaws.com",
   wsEndpoint: "/ws",
   useSockJS: true,
 };

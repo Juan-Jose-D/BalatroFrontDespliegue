@@ -8,7 +8,7 @@ import type { IMessage, StompSubscription } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import type { GameMessage } from "../types/backend";
 import { MessageType } from "../types/backend";
-import { BACKEND_WS_URL, WS_TOPICS, WS_DESTINATIONS } from "../config/backend.config";
+import { BACKEND_WS_URL, WS_TOPICS } from "../config/backend.config";
 
 type MessageCallback = (message: GameMessage) => void;
 type ErrorCallback = (error: GameMessage) => void;
@@ -21,8 +21,6 @@ export class WebSocketService {
   private pendingSubscriptions: Map<string, MessageCallback> = new Map();
   private playerId: string | null = null;
   private isConnected: boolean = false;
-  private reconnectAttempts: number = 0;
-  private maxReconnectAttempts: number = 5;
   private reconnectDelay: number = 3000;
 
   // Callbacks
@@ -95,7 +93,6 @@ export class WebSocketService {
           onConnect: async () => {
             console.log("✅ Conectado al servidor WebSocket");
             this.isConnected = true;
-            this.reconnectAttempts = 0;
             
             // IMPORTANTE: Esperar un momento para asegurar que el cliente STOMP esté completamente listo
             // El callback onConnect puede dispararse antes de que la conexión subyacente esté lista
