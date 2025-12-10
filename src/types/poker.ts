@@ -44,7 +44,7 @@ export const POKER_HANDS: Record<PokerHandType, PokerHand> = {
     type: 'two_pair',
     name: 'Doble Pareja',
     chips: 20,
-    multiplier: 2
+    multiplier: 4
   },
   three_of_a_kind: {
     type: 'three_of_a_kind',

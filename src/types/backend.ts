@@ -24,6 +24,11 @@ export const MessageType = {
   // Mensajes genéricos de juego
   GAME_MESSAGE: "GAME_MESSAGE" as const,
 
+  // Eventos de juego
+  ROUND_COMPLETE: "ROUND_COMPLETE" as const,
+  GAME_WON: "GAME_WON" as const,
+  GAME_LOST: "GAME_LOST" as const,
+
   // Comunicación
   CHAT_MESSAGE: "CHAT_MESSAGE" as const,
   PLAYER_EMOTE: "PLAYER_EMOTE" as const,

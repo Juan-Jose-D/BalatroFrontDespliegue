@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import BackgroundWrapper from '../components/BackgroundWrapper'
 import Card from '../components/game/Card'
@@ -19,6 +19,8 @@ import { webSocketService } from '../services/WebSocketService'
 import { useAuth } from '../context/AuthContext'
 import { getPlayerId } from '../utils/playerId'
 import type { ShopItem } from '../types/shop'
+import { MessageType } from '../types/backend'
+import { gameMessageService } from '../services/GameMessageService'
 
 function PlayMultiplayerGame() {
   const nav = useNavigate()
@@ -43,7 +45,14 @@ function PlayMultiplayerGame() {
     chatMessages,
     sendChatMessage,
     sendGameAction,
-    lastOpponentAction
+    lastOpponentAction,
+    opponentRoundComplete,
+    opponentGameWon,
+    opponentGameLost,
+    opponentGameWonReason,
+    opponentAnte,
+    opponentBlind,
+    opponentNoHandsInfo
   } = useGameMultiplayer()
   
   const { isAuthenticated } = useAuth()
@@ -51,7 +60,7 @@ function PlayMultiplayerGame() {
   const [remoteCognitoUsername, setRemoteCognitoUsername] = useState<string>('')
   
   // Obtener gameId
-  const gameId = searchParams.get('gameId') || contextGameId || game?.id || ''
+  const gameId = searchParams.get('gameId') || contextGameId || ''
   
   // Obtener username de Cognito del jugador local
   useEffect(() => {
@@ -153,12 +162,707 @@ function PlayMultiplayerGame() {
     }
   }, [showChat])
 
-  // Notificación de acciones del oponente
+  // Estado para el cronómetro cuando el oponente completa la ronda
+  const [roundTimer, setRoundTimer] = useState<number | null>(null)
+  const [isOpponentWaiting, setIsOpponentWaiting] = useState(false)
+  const [lostByTimeout, setLostByTimeout] = useState(false)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const lastRoundCompleteRef = useRef<{ ante: number; blind: string } | null>(null)
+  const isInitializingTimerRef = useRef<boolean>(false)
+  const lastOpponentRoundRef = useRef<{ ante: number; blind: string } | null>(null)
+  
+  // Estado para rastrear cuando el jugador local se queda sin manos
+  const [localNoHands, setLocalNoHands] = useState<{ ante: number; blind: string } | null>(null)
+  
+  // Debug: Log cuando cambian los estados del cronómetro
   useEffect(() => {
-    if (lastOpponentAction) {
-      addNotification(`${opponentName} ${lastOpponentAction}`, 'opponent', 2500)
+    console.log('🕐 Estado del cronómetro:', { isOpponentWaiting, roundTimer, hasTimer: timerRef.current !== null })
+  }, [isOpponentWaiting, roundTimer])
+
+  // Función para comparar progreso: determina si el oponente está más adelantado
+  const isOpponentAhead = useCallback(() => {
+    // Comparar ante primero
+    if (opponentAnte > gameState.ante) return true
+    if (opponentAnte < gameState.ante) return false
+    
+    // Si están en el mismo ante, comparar blind
+    const blindOrder = { small: 1, big: 2, boss: 3 }
+    return blindOrder[opponentBlind] > blindOrder[gameState.blind]
+  }, [opponentAnte, opponentBlind, gameState.ante, gameState.blind])
+  
+  // Función para verificar si ambos jugadores están en el mismo nivel
+  const areAtSameLevel = useCallback(() => {
+    return opponentAnte === gameState.ante && opponentBlind === gameState.blind
+  }, [opponentAnte, opponentBlind, gameState.ante, gameState.blind])
+  
+  // Función para verificar si el jugador local está adelante o al mismo nivel
+  const isLocalAheadOrEqual = useCallback(() => {
+    if (gameState.ante > opponentAnte) return true
+    if (gameState.ante < opponentAnte) return false
+    const blindOrder = { small: 1, big: 2, boss: 3 }
+    return blindOrder[gameState.blind] >= blindOrder[opponentBlind]
+  }, [opponentAnte, opponentBlind, gameState.ante, gameState.blind])
+
+  // Detectar cuando el jugador local completa una ronda y notificar al oponente
+  useEffect(() => {
+    if (gameState.gameStatus === 'won' && gameId) {
+      const currentRound = { ante: gameState.ante, blind: gameState.blind }
+      
+      // Evitar enviar múltiples veces el mismo ROUND_COMPLETE
+      if (lastRoundCompleteRef.current && 
+          lastRoundCompleteRef.current.ante === currentRound.ante && 
+          lastRoundCompleteRef.current.blind === currentRound.blind) {
+        console.log('⏭️ ROUND_COMPLETE ya enviado para esta ronda, omitiendo...')
+        return
+      }
+      
+      console.log('🎉 Jugador local completó una ronda, notificando al oponente...', {
+        ante: gameState.ante,
+        blind: gameState.blind,
+        score: gameState.currentRound.score,
+        gameId
+      })
+      
+      // CRÍTICO: Cuando el jugador local completa una ronda (especialmente después de boss),
+      // verificar inmediatamente si debe detenerse el cronómetro
+      const blindOrder = { small: 1, big: 2, boss: 3 }
+      const localBlindOrder = blindOrder[gameState.blind as keyof typeof blindOrder]
+      const oppBlindOrder = blindOrder[opponentBlind as keyof typeof blindOrder]
+      
+      const localIsAhead = gameState.ante > opponentAnte || 
+                          (gameState.ante === opponentAnte && localBlindOrder > oppBlindOrder)
+      const sameLevel = gameState.ante === opponentAnte && localBlindOrder === oppBlindOrder
+      
+      // Si el jugador local está adelante o al mismo nivel, DETENER el cronómetro inmediatamente
+      if ((localIsAhead || sameLevel) && (timerRef.current !== null || isOpponentWaiting)) {
+        console.log('🛑 DETENIENDO cronómetro: jugador local completó ronda y está adelante o al mismo nivel', {
+          local: { ante: gameState.ante, blind: gameState.blind },
+          opponent: { ante: opponentAnte, blind: opponentBlind },
+          localIsAhead,
+          sameLevel
+        })
+        // Detener el cronómetro manualmente
+        if (timerRef.current) {
+          clearInterval(timerRef.current)
+          timerRef.current = null
+        }
+        setIsOpponentWaiting(false)
+        setRoundTimer(null)
+        isInitializingTimerRef.current = false
+      }
+      
+      // Marcar que ya enviamos este ROUND_COMPLETE
+      lastRoundCompleteRef.current = currentRound
+      
+      // Enviar mensaje ROUND_COMPLETE
+      gameMessageService.sendGameMessage(
+        {
+          action: 'ROUND_COMPLETE',
+          data: {
+            ante: gameState.ante,
+            blind: gameState.blind,
+            score: gameState.currentRound.score
+          }
+        },
+        MessageType.ROUND_COMPLETE
+      )
+      
+      console.log('✅ Mensaje ROUND_COMPLETE enviado al backend')
     }
-  }, [lastOpponentAction, opponentName, addNotification])
+  }, [gameState.gameStatus, gameState.ante, gameState.blind, gameState.currentRound.score, gameId, opponentAnte, opponentBlind, isOpponentWaiting])
+  
+  // Efecto para detener el cronómetro cuando el jugador local completa una ronda y está adelante o al mismo nivel
+  useEffect(() => {
+    if (gameState.gameStatus === 'won') {
+      // CRÍTICO: Cuando el jugador local completa una ronda, verificar si debe detener el cronómetro
+      // Si el jugador local está adelante o al mismo nivel, detener el cronómetro inmediatamente
+      if (isLocalAheadOrEqual() || areAtSameLevel()) {
+        console.log('🛑 Jugador local completó ronda y está adelante o al mismo nivel, deteniendo cronómetro')
+        if (timerRef.current !== null || isOpponentWaiting) {
+          // Usar stopTimer si está disponible, sino limpiar manualmente
+          if (timerRef.current) {
+            clearInterval(timerRef.current)
+            timerRef.current = null
+          }
+          setIsOpponentWaiting(false)
+          setRoundTimer(null)
+          isInitializingTimerRef.current = false
+        }
+      }
+    }
+  }, [gameState.gameStatus, gameState.ante, gameState.blind, isLocalAheadOrEqual, areAtSameLevel, isOpponentWaiting])
+
+  // Detectar cuando el jugador local se queda sin manos
+  // NO enviamos GAME_WON inmediatamente, esperamos a verificar el progreso
+  useEffect(() => {
+    if (gameState.gameStatus === 'lost' && gameId && !lostByTimeout) {
+      const reason = gameState.currentRound.handsRemaining <= 0 ? 'no_hands' : 'unknown'
+      
+      if (reason === 'no_hands') {
+        // Marcar que el jugador local se quedó sin manos
+        if (!localNoHands) {
+          console.log('💀 Jugador local se quedó sin manos en Ante', gameState.ante, 'Blind', gameState.blind)
+          setLocalNoHands({ ante: gameState.ante, blind: gameState.blind })
+        }
+        
+        // Enviar GAME_LOST para notificar al oponente
+        gameMessageService.sendGameMessage(
+          {
+            action: 'GAME_LOST',
+            data: {
+              reason: 'no_hands',
+              ante: gameState.ante,
+              blind: gameState.blind,
+              score: gameState.currentRound.score
+            }
+          },
+          MessageType.GAME_LOST
+        )
+        
+        // Limpiar timer si estaba activo
+        if (timerRef.current) {
+          clearInterval(timerRef.current)
+          timerRef.current = null
+        }
+        setIsOpponentWaiting(false)
+        setRoundTimer(null)
+      } else {
+        // Si perdió por otra razón (no no_hands), enviar GAME_WON inmediatamente
+        console.log('💀 Jugador local perdió (no por timeout, no por no_hands), notificando al oponente...')
+        
+        gameMessageService.sendGameMessage(
+          {
+            action: 'GAME_LOST',
+            data: {
+              reason: reason,
+              ante: gameState.ante,
+              blind: gameState.blind,
+              score: gameState.currentRound.score
+            }
+          },
+          MessageType.GAME_LOST
+        )
+        
+        gameMessageService.sendGameMessage(
+          {
+            action: 'GAME_WON',
+            data: {
+              reason: 'opponent_lost',
+              message: 'El oponente perdió',
+              ante: gameState.ante,
+              blind: gameState.blind,
+              score: gameState.currentRound.score
+            }
+          },
+          MessageType.GAME_WON
+        )
+      }
+    }
+  }, [gameState.gameStatus, gameState.ante, gameState.blind, gameState.currentRound.score, gameState.currentRound.handsRemaining, gameId, lostByTimeout, localNoHands])
+
+  // Función para comparar si un progreso está más adelante que otro
+  const isProgressAhead = useCallback((ante1: number, blind1: string, ante2: number, blind2: string) => {
+    if (ante1 > ante2) return true
+    if (ante1 < ante2) return false
+    const blindOrder = { small: 1, big: 2, boss: 3 }
+    return blindOrder[blind1 as keyof typeof blindOrder] > blindOrder[blind2 as keyof typeof blindOrder]
+  }, [])
+  
+  // Función para verificar si un progreso superó otro (pasó de ante o avanzó de blind)
+  const hasProgressSurpassed = useCallback((currentAnte: number, currentBlind: string, targetAnte: number, targetBlind: string) => {
+    // Si el ante actual es mayor, definitivamente superó
+    if (currentAnte > targetAnte) return true
+    // Si el ante es igual pero el blind es mayor, superó
+    if (currentAnte === targetAnte) {
+      const blindOrder = { small: 1, big: 2, boss: 3 }
+      return blindOrder[currentBlind as keyof typeof blindOrder] > blindOrder[targetBlind as keyof typeof blindOrder]
+    }
+    return false
+  }, [])
+  
+  // Efecto para verificar cuándo declarar victoria cuando alguien se queda sin manos
+  useEffect(() => {
+    // Solo verificar si el juego está en curso
+    if (gameState.gameStatus !== 'playing' && gameState.gameStatus !== 'lost') {
+      return
+    }
+    
+    const currentProgress = { ante: gameState.ante, blind: gameState.blind }
+    const opponentProgress = { ante: opponentAnte, blind: opponentBlind }
+    
+    // CASO 1: El oponente se quedó sin manos
+    if (opponentNoHandsInfo && !opponentGameLost && !opponentGameWon) {
+      const opponentNoHandsProgress = { ante: opponentNoHandsInfo.ante, blind: opponentNoHandsInfo.blind }
+      
+      // Si el jugador local está más adelante que donde el oponente se quedó sin manos → VICTORIA
+      if (isProgressAhead(currentProgress.ante, currentProgress.blind, opponentNoHandsProgress.ante, opponentNoHandsProgress.blind)) {
+        console.log('🏆 ¡VICTORIA! El jugador local está más adelante que donde el oponente se quedó sin manos')
+        
+        // Enviar mensaje de victoria (el contexto lo procesará y establecerá opponentGameLost)
+        if (gameId) {
+          gameMessageService.sendGameMessage(
+            {
+              action: 'GAME_WON',
+              data: {
+                reason: 'opponent_no_hands',
+                message: 'El oponente se quedó sin manos',
+                ante: currentProgress.ante,
+                blind: currentProgress.blind,
+                score: gameState.currentRound.score
+              }
+            },
+            MessageType.GAME_WON
+          )
+        }
+      }
+      // Si están en el mismo ante donde el oponente se quedó sin manos
+      else if (currentProgress.ante === opponentNoHandsProgress.ante && currentProgress.blind === opponentNoHandsProgress.blind) {
+        // Si el jugador local también se quedó sin manos → EMPATE
+        if (localNoHands && localNoHands.ante === opponentNoHandsProgress.ante && localNoHands.blind === opponentNoHandsProgress.blind) {
+          console.log('🤝 EMPATE: Ambos jugadores se quedaron sin manos en el mismo ante')
+          // Marcar como empate (ambos perdieron)
+          if (gameId) {
+            gameMessageService.sendGameMessage(
+              {
+                action: 'GAME_LOST',
+                data: {
+                  reason: 'tie',
+                  message: 'Empate: Ambos jugadores se quedaron sin manos',
+                  ante: currentProgress.ante,
+                  blind: currentProgress.blind,
+                  score: gameState.currentRound.score
+                }
+              },
+              MessageType.GAME_LOST
+            )
+          }
+        }
+        // Si el jugador local pasa de ante → VICTORIA (se verifica en el siguiente else if)
+      }
+      // Si el jugador local pasa de ante después de que el oponente se quedó sin manos en el mismo ante
+      else if (hasProgressSurpassed(currentProgress.ante, currentProgress.blind, opponentNoHandsProgress.ante, opponentNoHandsProgress.blind)) {
+        console.log('🏆 ¡VICTORIA! El jugador local pasó de ante después de que el oponente se quedó sin manos')
+        if (gameId) {
+          gameMessageService.sendGameMessage(
+            {
+              action: 'GAME_WON',
+              data: {
+                reason: 'opponent_no_hands',
+                message: 'El oponente se quedó sin manos',
+                ante: currentProgress.ante,
+                blind: currentProgress.blind,
+                score: gameState.currentRound.score
+              }
+            },
+            MessageType.GAME_WON
+          )
+        }
+      }
+    }
+    
+    // CASO 2: El jugador local se quedó sin manos
+    if (localNoHands && gameState.gameStatus === 'lost' && !opponentGameLost && !opponentGameWon) {
+      const localNoHandsProgress = { ante: localNoHands.ante, blind: localNoHands.blind }
+      
+      // Si el oponente está más adelante que donde el jugador local se quedó sin manos → DERROTA (ya está marcado)
+      if (isProgressAhead(opponentProgress.ante, opponentProgress.blind, localNoHandsProgress.ante, localNoHandsProgress.blind)) {
+        console.log('💀 El oponente está más adelante, el jugador local perdió')
+        // Ya está marcado como perdido, no hacer nada
+      }
+      // Si el oponente supera el ante donde el jugador local se quedó sin manos → El oponente ganó
+      else if (hasProgressSurpassed(opponentProgress.ante, opponentProgress.blind, localNoHandsProgress.ante, localNoHandsProgress.blind)) {
+        console.log('💀 El oponente superó el ante donde el jugador local se quedó sin manos - El oponente ganó')
+        // El oponente ganó, esto se manejará cuando el oponente reciba el GAME_WON
+        // No hacemos nada aquí porque el jugador local ya perdió
+      }
+    }
+  }, [
+    gameState.gameStatus,
+    gameState.ante,
+    gameState.blind,
+    gameState.currentRound.score,
+    opponentAnte,
+    opponentBlind,
+    opponentNoHandsInfo,
+    opponentGameLost,
+    opponentGameWon,
+    localNoHands,
+    isProgressAhead,
+    hasProgressSurpassed,
+    gameId
+  ])
+
+  // Notificación cuando el oponente completa una ronda (SIEMPRE, independientemente de quién esté adelante)
+  useEffect(() => {
+    if (opponentRoundComplete && gameState.gameStatus === 'playing') {
+      console.log('🔔 Mostrando notificación: oponente completó una ronda')
+      addNotification(`${opponentName} completó la ronda`, 'opponent', 2000)
+    }
+  }, [opponentRoundComplete, gameState.gameStatus, opponentName, addNotification])
+
+  // Cronómetro de 15 segundos cuando el jugador local está por detrás del oponente
+  // Lógica:
+  // 1. Se inicia cuando el oponente completa una ronda Y el jugador local está por detrás
+  // 2. NO se resetea si el oponente completa otra ronda - continúa con el tiempo restante
+  // 3. Se detiene cuando el jugador local alcanza o supera al oponente
+  
+  // Función para iniciar el cronómetro
+  const startTimer = useCallback(() => {
+    // Evitar iniciar múltiples veces
+    if (timerRef.current !== null || isInitializingTimerRef.current) {
+      console.log('⏸️ Cronómetro ya está activo o inicializándose, omitiendo...')
+      return
+    }
+    
+    console.log('⏰ Iniciando cronómetro de 15 segundos...')
+    isInitializingTimerRef.current = true
+    
+    setIsOpponentWaiting(true)
+    setRoundTimer(15)
+    
+    // Limpiar timer anterior si existe (por seguridad)
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+    
+    // Iniciar cronómetro
+    timerRef.current = setInterval(() => {
+      setRoundTimer(prev => {
+        if (prev === null || prev <= 0) {
+          // Tiempo agotado
+          if (timerRef.current) {
+            clearInterval(timerRef.current)
+            timerRef.current = null
+          }
+          return 0
+        }
+        const newTime = prev - 1
+        if (newTime <= 0) {
+          // Tiempo agotado
+          if (timerRef.current) {
+            clearInterval(timerRef.current)
+            timerRef.current = null
+          }
+          return 0
+        }
+        return newTime
+      })
+    }, 1000)
+    
+    // Marcar que ya terminó la inicialización
+    setTimeout(() => {
+      isInitializingTimerRef.current = false
+      console.log('✅ Cronómetro iniciado correctamente')
+    }, 100)
+  }, [])
+  
+  // Función para detener el cronómetro
+  const stopTimer = useCallback(() => {
+    if (timerRef.current) {
+      console.log('🛑 Deteniendo cronómetro...')
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+    setIsOpponentWaiting(false)
+    setRoundTimer(null)
+    isInitializingTimerRef.current = false
+  }, [])
+  
+  // Efecto para iniciar el cronómetro cuando el oponente completa una ronda y estamos por detrás
+  // REGLA CRÍTICA: El cronómetro SOLO se activa si el OPONENTE está ADELANTE y completa una ronda
+  // NUNCA se activa si el jugador local está adelante o al mismo nivel
+  useEffect(() => {
+    // Solo procesar si el juego está en curso
+    if (gameState.gameStatus !== 'playing') {
+      return
+    }
+    
+    // Solo procesar cuando el oponente completa una ronda
+    if (!opponentRoundComplete) {
+      return
+    }
+    
+    // CRÍTICO: Verificación PRIMERO - comparar valores directamente
+    const localAnte = gameState.ante
+    const localBlind = gameState.blind
+    const oppAnte = opponentAnte
+    const oppBlind = opponentBlind
+    
+    const blindOrder = { small: 1, big: 2, boss: 3 }
+    const localBlindOrder = blindOrder[localBlind as keyof typeof blindOrder]
+    const oppBlindOrder = blindOrder[oppBlind as keyof typeof blindOrder]
+    
+    // Verificar si el OPONENTE está adelante (no el jugador local)
+    let opponentIsAhead = false
+    if (oppAnte > localAnte) {
+      opponentIsAhead = true
+    } else if (oppAnte === localAnte && oppBlindOrder > localBlindOrder) {
+      opponentIsAhead = true
+    }
+    
+    // Verificar si están al mismo nivel
+    const sameLevel = oppAnte === localAnte && oppBlindOrder === localBlindOrder
+    
+    // Verificar si el jugador local está adelante
+    const localIsAhead = localAnte > oppAnte || (localAnte === oppAnte && localBlindOrder > oppBlindOrder)
+    
+    console.log('🔍 VERIFICACIÓN CRÍTICA al recibir ROUND_COMPLETE:', {
+      local: { ante: localAnte, blind: localBlind, blindOrder: localBlindOrder },
+      opponent: { ante: oppAnte, blind: oppBlind, blindOrder: oppBlindOrder },
+      opponentIsAhead,
+      localIsAhead,
+      sameLevel,
+      shouldActivateTimer: opponentIsAhead && !sameLevel && !localIsAhead
+    })
+    
+    // REGLA ABSOLUTA: Si el jugador local está adelante o al mismo nivel, NUNCA activar cronómetro
+    if (localIsAhead || sameLevel) {
+      // Detener cualquier cronómetro activo inmediatamente
+      if (timerRef.current !== null || isOpponentWaiting) {
+        console.log('🛑 DETENIENDO cronómetro: jugador local está adelante o al mismo nivel')
+        stopTimer()
+      }
+      console.log('❌ NO se inicia cronómetro: jugador local adelante o mismo nivel')
+      return // SALIR INMEDIATAMENTE - no procesar más
+    }
+    
+    // SOLO continuar si el oponente está adelante
+    if (!opponentIsAhead) {
+      console.log('❌ NO se inicia cronómetro: oponente NO está adelante')
+      // Detener cualquier cronómetro activo
+      if (timerRef.current !== null || isOpponentWaiting) {
+        stopTimer()
+      }
+      return
+    }
+    
+    // Verificar si el oponente acaba de completar una ronda nueva
+    const currentOpponentRound = { ante: oppAnte, blind: oppBlind }
+    const isNewRound = !lastOpponentRoundRef.current || 
+                       lastOpponentRoundRef.current.ante !== currentOpponentRound.ante ||
+                       lastOpponentRoundRef.current.blind !== currentOpponentRound.blind
+    
+    // SOLO iniciar cronómetro si:
+    // 1. El oponente completó una ronda nueva
+    // 2. El oponente está adelante (ya verificado arriba)
+    // 3. El jugador local está atrás (ya verificado arriba)
+    if (isNewRound && opponentIsAhead && !localIsAhead && !sameLevel) {
+      lastOpponentRoundRef.current = currentOpponentRound
+      
+      // Verificación final antes de iniciar
+      if (timerRef.current === null && !isOpponentWaiting) {
+        console.log('✅ INICIANDO cronómetro: oponente adelante completó nueva ronda, jugador local atrás')
+        startTimer()
+      } else {
+        console.log('⏸️ Cronómetro ya está activo, continuando con tiempo restante')
+      }
+    } else {
+      console.log('❌ NO se inicia cronómetro:', {
+        isNewRound,
+        opponentIsAhead,
+        localIsAhead,
+        sameLevel
+      })
+    }
+  }, [opponentRoundComplete, opponentAnte, opponentBlind, gameState.gameStatus, gameState.ante, gameState.blind, isOpponentWaiting, startTimer, stopTimer])
+  
+  // Ref para rastrear el último progreso conocido (ante/blind) para evitar detener el cronómetro por cambios no relacionados
+  const lastProgressRef = useRef<{ localAnte: number; localBlind: string; opponentAnte: number; opponentBlind: string } | null>(null)
+  
+  // Efecto para mantener/detener el cronómetro según quién esté por delante
+  // IMPORTANTE: Solo se detiene cuando cambia el PROGRESO (ante/blind), no por otras actualizaciones (dinero, jokers, etc.)
+  useEffect(() => {
+    // No hacer nada si estamos inicializando el cronómetro
+    if (isInitializingTimerRef.current) {
+      return
+    }
+    
+    // Solo procesar si el juego está en curso
+    if (gameState.gameStatus !== 'playing') {
+      return
+    }
+    
+    // Verificar si realmente cambió el progreso (ante o blind)
+    const currentProgress = {
+      localAnte: gameState.ante,
+      localBlind: gameState.blind,
+      opponentAnte: opponentAnte,
+      opponentBlind: opponentBlind
+    }
+    
+    const progressChanged = !lastProgressRef.current ||
+      lastProgressRef.current.localAnte !== currentProgress.localAnte ||
+      lastProgressRef.current.localBlind !== currentProgress.localBlind ||
+      lastProgressRef.current.opponentAnte !== currentProgress.opponentAnte ||
+      lastProgressRef.current.opponentBlind !== currentProgress.opponentBlind
+    
+    // Verificación CRÍTICA: Siempre verificar si están al mismo nivel cuando el progreso cambió
+    // Esto es importante cuando ambos jugadores completan el boss y avanzan al mismo ante
+    if (progressChanged) {
+      const blindOrderCheck = { small: 1, big: 2, boss: 3 }
+      const localBlindOrderCheck = blindOrderCheck[currentProgress.localBlind as keyof typeof blindOrderCheck]
+      const oppBlindOrderCheck = blindOrderCheck[currentProgress.opponentBlind as keyof typeof blindOrderCheck]
+      const sameLevelCheck = currentProgress.localAnte === currentProgress.opponentAnte && 
+                            localBlindOrderCheck === oppBlindOrderCheck
+      
+      // Si están al mismo nivel Y hay un cronómetro activo, detenerlo INMEDIATAMENTE
+      if (sameLevelCheck && (timerRef.current !== null || isOpponentWaiting)) {
+        console.log('🛑 DETENIENDO cronómetro INMEDIATAMENTE: ambos están al mismo nivel', {
+          ante: currentProgress.localAnte,
+          blind: currentProgress.localBlind,
+          opponentAnte: currentProgress.opponentAnte,
+          opponentBlind: currentProgress.opponentBlind,
+          progressChanged
+        })
+        stopTimer()
+        // Actualizar la referencia después de detener
+        lastProgressRef.current = currentProgress
+        return
+      }
+    }
+    
+    // Actualizar la referencia del progreso
+    lastProgressRef.current = currentProgress
+    
+    // Solo evaluar el cronómetro si realmente cambió el progreso
+    if (!progressChanged) {
+      return // No hacer nada si el progreso no cambió (por ejemplo, solo cambió el dinero)
+    }
+    
+    // Verificación EXPLÍCITA del progreso usando valores directos
+    const localAnte = currentProgress.localAnte
+    const localBlind = currentProgress.localBlind
+    const oppAnte = currentProgress.opponentAnte
+    const oppBlind = currentProgress.opponentBlind
+    
+    const blindOrder = { small: 1, big: 2, boss: 3 }
+    const localBlindOrder = blindOrder[localBlind as keyof typeof blindOrder]
+    const oppBlindOrder = blindOrder[oppBlind as keyof typeof blindOrder]
+    
+    // Verificar si el jugador local está adelante o al mismo nivel
+    const localIsAhead = localAnte > oppAnte || (localAnte === oppAnte && localBlindOrder > oppBlindOrder)
+    const sameLevel = localAnte === oppAnte && localBlindOrder === oppBlindOrder
+    const opponentIsAhead = oppAnte > localAnte || (oppAnte === localAnte && oppBlindOrder > localBlindOrder)
+    
+    const shouldHaveTimer = opponentIsAhead && !sameLevel && !localIsAhead
+    
+    console.log('🔍 Verificando cronómetro después de cambio de progreso:', {
+      local: { ante: localAnte, blind: localBlind, blindOrder: localBlindOrder },
+      opponent: { ante: oppAnte, blind: oppBlind, blindOrder: oppBlindOrder },
+      localIsAhead,
+      opponentIsAhead,
+      sameLevel,
+      shouldHaveTimer,
+      isOpponentWaiting,
+      hasActiveTimer: timerRef.current !== null,
+      progressChanged
+    })
+    
+    // CRÍTICO: Si el jugador local está adelante, al mismo nivel, o el oponente ya no está adelante, DETENER el cronómetro
+    // Esto incluye el caso especial de cuando ambos están en "boss" (mismo nivel)
+    // Y especialmente cuando el jugador local pasa de boss y alcanza al oponente (mismo nivel en el siguiente ante)
+    if ((localIsAhead || sameLevel || !opponentIsAhead) && (isOpponentWaiting || timerRef.current !== null)) {
+      console.log('🛑 DETENIENDO cronómetro: jugador local alcanzó, superó o está al mismo nivel que el oponente', {
+        localIsAhead,
+        sameLevel,
+        opponentIsAhead,
+        shouldHaveTimer,
+        reason: localIsAhead ? 'jugador local adelante' : sameLevel ? 'mismo nivel' : 'oponente no adelante',
+        local: { ante: localAnte, blind: localBlind },
+        opponent: { ante: oppAnte, blind: oppBlind }
+      })
+      stopTimer()
+    }
+    
+    // VERIFICACIÓN ADICIONAL: Si están al mismo nivel y hay un cronómetro activo, detenerlo inmediatamente
+    // Esto es especialmente importante después de completar el boss cuando ambos avanzan al mismo ante
+    if (sameLevel && (timerRef.current !== null || isOpponentWaiting)) {
+      console.log('🛑 DETENIENDO cronómetro: AMBOS están al mismo nivel (ante y blind iguales)', {
+        ante: localAnte,
+        blind: localBlind,
+        opponentAnte: oppAnte,
+        opponentBlind: oppBlind
+      })
+      stopTimer()
+    }
+    
+    // IMPORTANTE: NUNCA iniciar el cronómetro desde este efecto
+    // El cronómetro solo se inicia cuando el oponente completa una ronda nueva Y el jugador local está por detrás
+  }, [gameState.gameStatus, gameState.ante, gameState.blind, opponentAnte, opponentBlind, isOpponentWaiting, isOpponentAhead, stopTimer])
+
+  // Perder automáticamente si el cronómetro llega a 0
+  useEffect(() => {
+    if (roundTimer === 0 && isOpponentWaiting && gameState.gameStatus === 'playing' && !lostByTimeout) {
+      console.log('⏰ Tiempo agotado! El jugador pierde automáticamente.')
+      
+      // Limpiar timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current)
+        timerRef.current = null
+      }
+      
+      // Marcar como perdido por timeout
+      setLostByTimeout(true)
+      
+      // Marcar el juego como perdido
+      game.loseGame('timeout')
+      
+      // Notificar al oponente que perdimos y que él ganó
+      if (gameId) {
+        console.log('📤 Enviando mensajes de fin de partida por timeout...')
+        
+        // Enviar GAME_LOST para indicar que el jugador local perdió
+        gameMessageService.sendGameMessage(
+          {
+            action: 'GAME_LOST',
+            data: {
+              reason: 'timeout',
+              ante: gameState.ante,
+              blind: gameState.blind,
+              score: gameState.currentRound.score
+            }
+          },
+          MessageType.GAME_LOST
+        )
+        console.log('✅ GAME_LOST enviado (jugador local perdió por timeout)')
+        
+        // Enviar GAME_WON al oponente para indicar que ganó porque el jugador local se quedó sin tiempo
+        // IMPORTANTE: Este mensaje debe ser procesado por el oponente como su victoria
+        gameMessageService.sendGameMessage(
+          {
+            action: 'GAME_WON',
+            data: {
+              reason: 'opponent_timeout',
+              message: 'El oponente se quedó sin tiempo',
+              ante: gameState.ante,
+              blind: gameState.blind,
+              score: gameState.currentRound.score
+            }
+          },
+          MessageType.GAME_WON
+        )
+        console.log('✅ GAME_WON enviado (oponente ganó porque jugador local perdió por timeout)')
+      }
+      
+      setIsOpponentWaiting(false)
+      setRoundTimer(null)
+    }
+  }, [roundTimer, isOpponentWaiting, gameState.gameStatus, gameId, gameState.ante, gameState.blind, gameState.currentRound.score, lostByTimeout, game])
+
+  // Notificaciones cuando el oponente gana
+  useEffect(() => {
+    if (opponentGameWon) {
+      addNotification(`🏆 ${opponentName} ganó el juego!`, 'opponent', 10000)
+    }
+  }, [opponentGameWon, opponentName, addNotification])
+
+  // Notificaciones cuando el oponente pierde
+  useEffect(() => {
+    if (opponentGameLost) {
+      addNotification(`💀 ${opponentName} perdió el juego!`, 'opponent', 10000)
+    }
+  }, [opponentGameLost, opponentName, addNotification])
 
   // Detectar efectos de cartas al jugar
   useEffect(() => {
@@ -223,6 +927,15 @@ function PlayMultiplayerGame() {
 
       const handleSkipShop = () => {
         setShowShop(false)
+        
+        // Resetear la referencia para permitir enviar ROUND_COMPLETE de la nueva ronda
+        lastRoundCompleteRef.current = null
+        console.log('🔄 Avanzando de ronda, resetando lastRoundCompleteRef')
+        
+        // NOTA: NO limpiamos el cronómetro aquí porque el efecto que verifica
+        // si el oponente está por delante se encargará de detenerlo si alcanzamos al oponente
+        // Si todavía estamos por detrás, el cronómetro debe continuar
+        
         advanceRound()
       }
 
@@ -279,31 +992,74 @@ function PlayMultiplayerGame() {
   }
 
   // -----------------------
-  // PANTALLA DE DERROTA
+  // PANTALLA DE FIN DE PARTIDA
   // -----------------------
-  if (gameState.gameStatus === 'lost') {
+  if (gameState.gameStatus === 'lost' || lostByTimeout || opponentGameLost || opponentGameWon) {
+    // PRIORIDAD: Si el jugador local perdió (por timeout o por otra razón), siempre mostrar derrota
+    // Si el oponente perdió, mostrar victoria
+    // Si el oponente ganó, mostrar derrota
+    const localPlayerLost = gameState.gameStatus === 'lost' || lostByTimeout
+    const isWinner = !localPlayerLost && opponentGameLost // Solo ganamos si NO perdimos Y el oponente perdió
+    const isLoser = localPlayerLost || opponentGameWon // Perdemos si perdimos localmente O el oponente ganó
+    
     return (
       <BackgroundWrapper image={playBg}>
-        <div className='jugarDivDerrota'>
-          <h1>GAME OVER</h1>
-          <h2>Te quedaste sin manos</h2>
+        <div className={isWinner ? 'jugarDivVictoria' : 'jugarDivDerrota'}>
+          <h1>{isWinner ? '🏆 ¡VICTORIA!' : '💀 GAME OVER'}</h1>
+          <h2>
+            {isWinner 
+              ? `¡Has ganado la partida!` 
+              : opponentGameWon 
+                ? `${opponentName} ganó la partida` 
+                : 'Has perdido la partida'}
+          </h2>
           
-          <div className='jugarRecursos'>
-            <p className="jugarRecursoNombre">Puntuación:</p>
-            <p className="jugarRecursoValor">{gameState.currentRound.score} / {blindInfo.scoreNeeded}</p>
-          </div>
-          <div className='jugarRecursos'>
-            <p className="jugarRecursoNombre">Faltaban:</p>
-            <p className="jugarRecursoValor">{blindInfo.scoreRemaining} puntos</p>
-          </div>
-          <div className='jugarRecursos'>
-            <p className="jugarRecursoNombre">Ante alcanzado: </p>
-            <p className="jugarRecursoValor">{gameState.ante}</p>
+          <div className="victory-info">
+            <div className='jugarRecursos'>
+              <p className="jugarRecursoNombre">Tu Puntuación Final:</p>
+              <p className="jugarRecursoValor">{gameState.currentRound.score} / {blindInfo.scoreNeeded}</p>
+            </div>
+            <div className='jugarRecursos'>
+              <p className="jugarRecursoNombre">Puntuación del Oponente:</p>
+              <p className="jugarRecursoValor">{opponentScore}</p>
+            </div>
+            <div className='jugarRecursos'>
+              <p className="jugarRecursoNombre">Ante alcanzado:</p>
+              <p className="jugarRecursoValor">{gameState.ante}</p>
+            </div>
+            {/* Mostrar razón solo si el jugador local perdió */}
+            {isLoser && !isWinner && (
+              <div className='jugarRecursos'>
+                <p className="jugarRecursoNombre">Razón:</p>
+                <p className="jugarRecursoValor">
+                  {lostByTimeout 
+                    ? 'Tiempo agotado' 
+                    : opponentGameWon && opponentGameWonReason
+                      ? opponentGameWonReason
+                      : gameState.currentRound.handsRemaining <= 0 
+                        ? 'Te quedaste sin manos' 
+                        : 'Perdiste'}
+                </p>
+              </div>
+            )}
+            {/* Mostrar razón de victoria si el jugador local ganó */}
+            {isWinner && opponentGameLost && (
+              <div className='jugarRecursos'>
+                <p className="jugarRecursoNombre">Razón:</p>
+                <p className="jugarRecursoValor">
+                  {opponentNoHandsInfo 
+                    ? 'El oponente se quedó sin manos' 
+                    : 'El oponente se quedó sin tiempo'}
+                </p>
+              </div>
+            )}
           </div>
 
-          <button className="buttonGreen" onClick={handleExit}>
-            Salir
-          </button>
+          <div className="jugarVictoriaAcciones">
+            <button className="buttonGreen" onClick={handleExit}>
+              Salir
+            </button>
+          </div>
         </div>
       </BackgroundWrapper>
     )
@@ -321,6 +1077,31 @@ function PlayMultiplayerGame() {
           localCognitoUsername={localCognitoUsername}
           remoteCognitoUsername={remoteCognitoUsername}
         />
+      )}
+
+      {/* CRONÓMETRO CUANDO EL OPONENTE COMPLETÓ LA RONDA - FUERA DEL DIV PRINCIPAL */}
+      {isOpponentWaiting && roundTimer !== null && roundTimer >= 0 && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: roundTimer <= 5 ? '#ff4444' : '#ffaa00',
+            color: 'white',
+            padding: '12px 24px',
+            borderRadius: '8px',
+            fontSize: '20px',
+            fontWeight: 'bold',
+            zIndex: 10000,
+            boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
+            textAlign: 'center',
+            minWidth: '300px',
+            pointerEvents: 'none'
+          }}
+        >
+          ⏰ {roundTimer}s para avanzar
+        </div>
       )}
 
       <div className="jugarDivPrincipal">
@@ -394,8 +1175,9 @@ function PlayMultiplayerGame() {
                             sellJoker(joker.instanceId)
                           }
                         }}
+                        title={`Vender por $${Math.floor(joker.cost / 2)}`}
                       >
-                        ✕
+                        Vender
                       </button>
                     </div>
                   ))}

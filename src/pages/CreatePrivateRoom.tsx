@@ -82,7 +82,7 @@ export default function CreatePrivateRoom() {
   const handleCopyCode = () => {
     if (!roomCode) return
     navigator.clipboard.writeText(roomCode)
-    alert(`Código copiado: ${roomCode}`)
+    // Código copiado al portapapeles sin mostrar notificación
   }
 
   return (

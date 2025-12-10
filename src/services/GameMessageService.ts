@@ -159,6 +159,15 @@ export class GameMessageService {
         }
         break;
 
+      case MessageType.ROUND_COMPLETE:
+      case MessageType.GAME_WON:
+      case MessageType.GAME_LOST:
+        // Estos eventos también se pasan al callback de mensajes de juego
+        if (this.onGameMessageCallback) {
+          this.onGameMessageCallback(message);
+        }
+        break;
+
       case MessageType.PLAYER_DISCONNECTED:
         console.warn("⚠️ Jugador desconectado:", message.playerId);
         if (this.onPlayerDisconnectedCallback && message.playerId) {
