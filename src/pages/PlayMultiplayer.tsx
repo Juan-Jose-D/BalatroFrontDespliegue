@@ -969,6 +969,15 @@ function PlayMultiplayerGame() {
 
       return (
         <BackgroundWrapper image={playBg}>
+          {/* ⚡ VoiceControls SIEMPRE visible */}
+          {gameId && stableLocalUsernameRef.current && stableRemoteUsernameRef.current && (
+            <VoiceControls
+              key={`voice-${gameId}`}
+              gameId={gameId}
+              localCognitoUsername={stableLocalUsernameRef.current}
+              remoteCognitoUsername={stableRemoteUsernameRef.current}
+            />
+          )}
           <Shop
             ante={gameState.ante}
             money={gameState.money}
@@ -982,6 +991,15 @@ function PlayMultiplayerGame() {
     
     return (
       <BackgroundWrapper image={playBg}>
+        {/* ⚡ VoiceControls SIEMPRE visible */}
+        {gameId && stableLocalUsernameRef.current && stableRemoteUsernameRef.current && (
+          <VoiceControls
+            key={`voice-${gameId}`}
+            gameId={gameId}
+            localCognitoUsername={stableLocalUsernameRef.current}
+            remoteCognitoUsername={stableRemoteUsernameRef.current}
+          />
+        )}
         <div className="jugarDivVictoria">
           <h1>¡VICTORIA!</h1>
           <h2>{blindInfo.name} Completado</h2>
@@ -1032,6 +1050,15 @@ function PlayMultiplayerGame() {
     
     return (
       <BackgroundWrapper image={playBg}>
+        {/* ⚡ VoiceControls SIEMPRE visible */}
+        {gameId && stableLocalUsernameRef.current && stableRemoteUsernameRef.current && (
+          <VoiceControls
+            key={`voice-${gameId}`}
+            gameId={gameId}
+            localCognitoUsername={stableLocalUsernameRef.current}
+            remoteCognitoUsername={stableRemoteUsernameRef.current}
+          />
+        )}
         <div className={isWinner ? 'jugarDivVictoria' : 'jugarDivDerrota'}>
           <h1>{isWinner ? '🏆 ¡VICTORIA!' : '💀 GAME OVER'}</h1>
           <h2>
@@ -1094,13 +1121,14 @@ function PlayMultiplayerGame() {
   }
 
   // -----------------------
-  // JUEGO NORMAL MULTIJUGADOR
+  // RENDER PRINCIPAL - VoiceControls SIEMPRE VISIBLE
   // -----------------------
   return (
     <BackgroundWrapper image={playBg}>
-      {/* Controles de Chat de Voz - USANDO VALORES ESTABLES DESDE REFS */}
+      {/* ⚡ CRÍTICO: VoiceControls renderizado UNA SOLA VEZ aquí - NUNCA se desmonta */}
       {gameId && stableLocalUsernameRef.current && stableRemoteUsernameRef.current && (
         <VoiceControls
+          key={`voice-${gameId}`}
           gameId={gameId}
           localCognitoUsername={stableLocalUsernameRef.current}
           remoteCognitoUsername={stableRemoteUsernameRef.current}
