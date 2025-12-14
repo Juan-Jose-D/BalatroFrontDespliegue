@@ -14,14 +14,14 @@ const isDevelopment = import.meta.env.MODE === "development";
 
 
 const developmentConfig: BackendConfig = {
-  baseUrl: "http://localhost:8080",
+  baseUrl: "https://balatro-back-fbcpf8dzh3bkc9bf.eastus-01.azurewebsites.net",
   wsEndpoint: "/ws",
   useSockJS: true,
 };
 
 
 const productionConfig: BackendConfig = {
-  baseUrl: import.meta.env.VITE_BACKEND_URL || "https://balatro-backend.azurewebsites.net",
+  baseUrl: import.meta.env.VITE_BACKEND_URL || "https://balatro-back-fbcpf8dzh3bkc9bf.eastus-01.azurewebsites.net",
   wsEndpoint: "/ws",
   useSockJS: true,
 };
