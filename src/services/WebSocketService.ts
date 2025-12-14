@@ -21,7 +21,9 @@ export class WebSocketService {
   private pendingSubscriptions: Map<string, MessageCallback> = new Map();
   private playerId: string | null = null;
   private isConnected: boolean = false;
-  private reconnectDelay: number = 3000;
+  private reconnectDelay: number = 1000; // Reconexión más rápida para producción
+  private maxReconnectAttempts: number = 10; // Máximo de intentos de reconexión
+  private reconnectAttempts: number = 0;
 
   // Callbacks
   private onConnectCallback: ConnectionCallback | null = null;
@@ -96,12 +98,17 @@ export class WebSocketService {
           },
 
           reconnectDelay: this.reconnectDelay,
-          heartbeatIncoming: 4000,
-          heartbeatOutgoing: 4000,
+          heartbeatIncoming: 10000, // 10 segundos - más seguro para Azure
+          heartbeatOutgoing: 10000, // 10 segundos - mantiene la conexión viva
 
           onConnect: async () => {
-            console.log("✅ Conectado al servidor WebSocket");
+            console.log("✅ ========== CONECTADO AL WEBSOCKET ==========");
+            console.log("✅ PlayerId:", this.playerId);
+            console.log("✅ URL:", BACKEND_WS_URL);
+            console.log("✅ =============================================");
+            
             this.isConnected = true;
+            this.reconnectAttempts = 0; // Resetear contador al conectar exitosamente
             
             // IMPORTANTE: Esperar un momento para asegurar que el cliente STOMP esté completamente listo
             // El callback onConnect puede dispararse antes de que la conexión subyacente esté lista
@@ -159,10 +166,23 @@ export class WebSocketService {
           },
 
           onDisconnect: () => {
-            console.log("❌ Desconectado del servidor WebSocket");
+            console.log("❌ ========== WEBSOCKET DESCONECTADO ==========");
+            console.log("❌ PlayerId:", this.playerId);
+            console.log("❌ Conexión perdida, se intentará reconectar automáticamente");
+            console.log("❌ Intentos de reconexión:", this.reconnectAttempts, "/", this.maxReconnectAttempts);
+            console.log("❌ =============================================");
+            
             this.isConnected = false;
             this.subscriptions.clear();
             // No limpiar pendingSubscriptions para que se reintenten al reconectar
+            
+            // Incrementar contador de reconexiones
+            this.reconnectAttempts++;
+            
+            if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+              console.error("💀 Máximo de intentos de reconexión alcanzado. La conexión se ha perdido permanentemente.");
+              console.error("💀 Por favor, recarga la página para reconectar.");
+            }
             
             if (this.onDisconnectCallback) {
               this.onDisconnectCallback();
