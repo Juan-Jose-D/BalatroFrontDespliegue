@@ -1,42 +1,46 @@
-import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import BackgroundWrapper from '../components/BackgroundWrapper'
-import multiplayerBg from '../assets/backgrounds/multiplayer-bg.png'
-import Button from '../components/Button'
+import background from '../assets/backgrounds/generalBackground.png'
 
 export default function Multiplayer() {
   const nav = useNavigate()
 
   return (
-    <BackgroundWrapper image={multiplayerBg}>
-      <div className="panel multiplayerRoot" >
-        <h2>Multijugador</h2>
+    <BackgroundWrapper image={background}>
+      <div className="backgroundPanel multijugadorMenuGap">
 
-        <div className="column" style={{ marginTop: 10 }}>
-          <Button
-            variant="primary"
-            className="btn btnPrimary"
-            onClick={() => nav('/create')}
-          >
-            Crear sala
-          </Button>
+        <h1>Multijugador</h1>
+        <h2>Emparejamiento Automático</h2>
+        <button
+          className="buttonGreen"
+          onClick={() => nav('/searchRoom')}
+        >
+          Jugar
+        </button>
 
-          <Button
-            variant="secondary"
-            className="btn btnSecondary"
-            onClick={() => nav('/join')}
+        <h2>Salas Privadas</h2>
+        <div className="multijugadorMenuDivSalasBotones">
+          <button
+            className="buttonGreen"
+            onClick={() => nav('/createPrivateRoom')}
           >
-            Unirse a sala
-          </Button>
+            Crear Sala
+          </button>
 
-          <Button
-            variant="neutral"
-            className="btn btnNeutral"
-            onClick={() => nav('/')}
+          <button
+            className="buttonBlue"
+            onClick={() => nav('/private/join')}
           >
-            Volver al menú
-          </Button>
+            Unirse
+          </button>
         </div>
+        <button
+          className="buttonRed"
+          onClick={() => nav('/')}
+        >
+          Volver
+        </button>
+
       </div>
     </BackgroundWrapper>
   )
