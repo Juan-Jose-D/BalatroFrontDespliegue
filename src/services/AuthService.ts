@@ -60,10 +60,14 @@ export const configureAmplify = () => {
 
   // Solo configurar OAuth si el dominio está configurado
   if (cognitoDomain) {
+    // Detectar la URL actual del frontend
+    const currentOrigin = window.location.origin;
     const redirectUrls = [
+      currentOrigin + '/',
       'http://localhost:5173/',
       'http://localhost:5174/',
       'http://localhost:5175/',
+      'http://front-balatro.s3-website-us-east-1.amazonaws.com/',
     ];
     
     console.log('🔐 Configurando OAuth:', {
@@ -428,7 +432,7 @@ class AuthService {
       
       const accessToken = session.tokens?.accessToken?.toString() || null;
       const idToken = session.tokens?.idToken?.toString() || null;
-      const refreshToken = session.tokens?.refreshToken?.toString() || null;
+      const refreshToken = (session.tokens as any)?.refreshToken?.toString() || null;
       
       if (accessToken) {
         console.log('✅ Tokens obtenidos correctamente');
