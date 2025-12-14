@@ -1109,22 +1109,20 @@ function PlayMultiplayerGame() {
   // JUEGO NORMAL MULTIJUGADOR
   // -----------------------
   
-  // Log para detectar cuándo VoiceControls se renderiza/desmonta
-  const shouldRenderVoiceControls = gameId && localCognitoUsername && remoteCognitoUsername
+  // CRÍTICO: Monitorear las variables que controlan el renderizado de VoiceControls
   useEffect(() => {
-    console.log('🎙️ [PlayMultiplayer] VoiceControls render condition changed:', {
-      shouldRender: shouldRenderVoiceControls,
+    console.log('🎙️ [PlayMultiplayer] VoiceControls dependencies:', {
       gameId,
       localCognitoUsername,
       remoteCognitoUsername,
-      WARNING: shouldRenderVoiceControls ? '✅ RENDERIZANDO VoiceControls' : '❌ NO RENDERIZANDO (DESMONTADO)'
-    })
-  }, [shouldRenderVoiceControls, gameId, localCognitoUsername, remoteCognitoUsername])
+      willRender: !!(gameId && localCognitoUsername && remoteCognitoUsername)
+    });
+  }, [gameId, localCognitoUsername, remoteCognitoUsername]);
   
   return (
     <BackgroundWrapper image={playBg}>
       {/* Controles de Chat de Voz */}
-      {shouldRenderVoiceControls && (
+      {gameId && localCognitoUsername && remoteCognitoUsername && (
         <VoiceControls
           gameId={gameId}
           localCognitoUsername={localCognitoUsername}
