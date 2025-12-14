@@ -362,22 +362,38 @@ export class VoiceChatService {
    * Crear offer
    */
   private async createOffer(): Promise<void> {
+    console.log("🎯 [createOffer] INICIO - Verificando condiciones...");
+    
     if (!this.peerConnection) {
+      console.error("❌ [createOffer] ERROR: No hay peer connection");
       throw new Error("No hay peer connection");
     }
+    
+    console.log("🎯 [createOffer] PeerConnection existe, estado:", this.peerConnection.connectionState);
+    console.log("🎯 [createOffer] Signaling state:", this.peerConnection.signalingState);
+    console.log("🎯 [createOffer] ICE connection state:", this.peerConnection.iceConnectionState);
+    console.log("🎯 [createOffer] ICE gathering state:", this.peerConnection.iceGatheringState);
 
     console.log("📤 Creando offer...");
     
-    const offer = await this.peerConnection.createOffer({
-      offerToReceiveAudio: true,
-      offerToReceiveVideo: false,
-    });
-    
-    await this.peerConnection.setLocalDescription(offer);
-    console.log("✅ Local description establecida (offer)");
-    
-    this.sendSignalingMessage(SignalingMessageType.OFFER, offer);
-    console.log("✅ Offer enviado");
+    try {
+      const offer = await this.peerConnection.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: false,
+      });
+      
+      console.log("✅ [createOffer] Offer creado exitosamente:", offer.type);
+      
+      await this.peerConnection.setLocalDescription(offer);
+      console.log("✅ Local description establecida (offer)");
+      
+      console.log("📤 [createOffer] Enviando signaling message...");
+      this.sendSignalingMessage(SignalingMessageType.OFFER, offer);
+      console.log("✅ Offer enviado a:", this.remoteCognitoUsername);
+    } catch (error) {
+      console.error("❌ [createOffer] ERROR al crear o enviar offer:", error);
+      throw error;
+    }
   }
 
   /**
