@@ -920,6 +920,17 @@ function PlayMultiplayerGame() {
     }
   }, [gameState.currentRound.score])
 
+  // CRÍTICO: Monitorear las variables que controlan el renderizado de VoiceControls
+  // DEBE estar ANTES de cualquier return temprano para evitar React error #300
+  useEffect(() => {
+    console.log('🎙️ [PlayMultiplayer] VoiceControls dependencies:', {
+      gameId,
+      localCognitoUsername,
+      remoteCognitoUsername,
+      willRender: !!(gameId && localCognitoUsername && remoteCognitoUsername)
+    });
+  }, [gameId, localCognitoUsername, remoteCognitoUsername]);
+
   const handleSendChat = () => {
     if (chatInput.trim()) {
       sendChatMessage(chatInput)
@@ -1108,17 +1119,6 @@ function PlayMultiplayerGame() {
   // -----------------------
   // JUEGO NORMAL MULTIJUGADOR
   // -----------------------
-  
-  // CRÍTICO: Monitorear las variables que controlan el renderizado de VoiceControls
-  useEffect(() => {
-    console.log('🎙️ [PlayMultiplayer] VoiceControls dependencies:', {
-      gameId,
-      localCognitoUsername,
-      remoteCognitoUsername,
-      willRender: !!(gameId && localCognitoUsername && remoteCognitoUsername)
-    });
-  }, [gameId, localCognitoUsername, remoteCognitoUsername]);
-  
   return (
     <BackgroundWrapper image={playBg}>
       {/* Controles de Chat de Voz */}
