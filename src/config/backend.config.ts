@@ -21,7 +21,7 @@ const developmentConfig: BackendConfig = {
 
 
 const productionConfig: BackendConfig = {
-  baseUrl: import.meta.env.VITE_BACKEND_URL || "http://balatro-alb-1252182129.us-east-1.elb.amazonaws.com",
+  baseUrl: import.meta.env.VITE_BACKEND_URL || "https://balatro.mooo.com",
   wsEndpoint: "/ws",
   useSockJS: true,
 };
