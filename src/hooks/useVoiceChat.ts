@@ -219,6 +219,12 @@ export const useVoiceChat = (options: UseVoiceChatOptions) => {
    * IMPORTANTE: Solo iniciar una vez, no reiniciar cuando cambia el estado del juego
    */
   useEffect(() => {
+    console.log("🔍 [useVoiceChat] Auto-start effect triggered", {
+      autoStart,
+      isActive,
+      willStart: autoStart && !isActive
+    });
+    
     if (autoStart && !isActive) {
       console.log("🎤 Auto-iniciando chat de voz...");
       startVoiceChat();
@@ -231,10 +237,22 @@ export const useVoiceChat = (options: UseVoiceChatOptions) => {
    * no cuando cambia isActive, para evitar que el micrófono se desactive al avanzar de ronda
    */
   useEffect(() => {
+    console.log("🔍 [useVoiceChat] Component mounted - voice chat hook initialized", {
+      gameId,
+      localCognitoUsername,
+      remoteCognitoUsername,
+      autoStart,
+      isActive
+    });
+    
     return () => {
       // Solo cerrar si el componente se está desmontando completamente
       // No cerrar cuando isActive cambia, ya que esto puede ocurrir durante el juego
-      console.log("🧹 Cleanup de useVoiceChat - componente desmontándose");
+      console.log("🧹 [useVoiceChat] Cleanup - componente desmontándose", {
+        wasActive: isActive,
+        gameId,
+        localCognitoUsername
+      });
       // No cerrar automáticamente aquí, dejar que el usuario controle el micrófono
       // El micrófono solo se cerrará si el usuario lo hace explícitamente o si se desmonta el componente padre
     };

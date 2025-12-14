@@ -206,6 +206,7 @@ function GameMultiplayerProviderInner({
             console.log('🎉 Mensaje completo:', JSON.stringify(message, null, 2))
             console.log('🎉 Tipo de mensaje:', message.type)
             console.log('🎉 Payload:', message.payload)
+            console.log('🎉 VERIFICAR: ¿Se está desmontando algún componente después de esto?')
             
             // Actualizar ante y blind del oponente desde el payload
             // El payload contiene el blind que acaba de completar, necesitamos calcular el siguiente

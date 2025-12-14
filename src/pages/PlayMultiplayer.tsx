@@ -81,19 +81,40 @@ function PlayMultiplayerGame() {
   // Obtener username de Cognito del oponente
   // IMPORTANTE: El opponentId debe ser el username de Cognito, no un UUID
   useEffect(() => {
+    console.log('🔍 [PlayMultiplayer] opponentId changed, verificando para voice chat:', opponentId)
+    
     if (opponentId) {
       // Verificar que opponentId sea un username de Cognito válido
       const isCognitoUsername = !opponentId.startsWith('player-') && 
                                 !opponentId.startsWith('opponent-') &&
                                 !opponentId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
       
+      console.log('🔍 [PlayMultiplayer] ¿Es username de Cognito válido?', isCognitoUsername)
+      
       if (isCognitoUsername) {
-        setRemoteCognitoUsername(opponentId)
+        setRemoteCognitoUsername(prevValue => {
+          if (prevValue !== opponentId) {
+            console.log('🔄 [PlayMultiplayer] Actualizando remoteCognitoUsername:', {
+              prevValue,
+              newValue: opponentId,
+              IMPORTANTE: 'ESTO PUEDE CAUSAR REMOUNT DE VoiceControls'
+            })
+          }
+          return opponentId
+        })
         console.log('✅ Username de Cognito remoto obtenido:', opponentId)
       } else {
         console.warn('⚠️ ADVERTENCIA: opponentId no es un username de Cognito válido:', opponentId)
         console.warn('⚠️ El chat de voz requiere que el backend envíe usernames de Cognito en lugar de UUIDs')
-        setRemoteCognitoUsername('')
+        setRemoteCognitoUsername(prevValue => {
+          if (prevValue !== '') {
+            console.log('🔄 [PlayMultiplayer] Limpiando remoteCognitoUsername (opponentId inválido)', {
+              prevValue,
+              invalidOpponentId: opponentId
+            })
+          }
+          return ''
+        })
       }
     }
   }, [opponentId])
@@ -1087,10 +1108,23 @@ function PlayMultiplayerGame() {
   // -----------------------
   // JUEGO NORMAL MULTIJUGADOR
   // -----------------------
+  
+  // Log para detectar cuándo VoiceControls se renderiza/desmonta
+  const shouldRenderVoiceControls = gameId && localCognitoUsername && remoteCognitoUsername
+  useEffect(() => {
+    console.log('🎙️ [PlayMultiplayer] VoiceControls render condition changed:', {
+      shouldRender: shouldRenderVoiceControls,
+      gameId,
+      localCognitoUsername,
+      remoteCognitoUsername,
+      WARNING: shouldRenderVoiceControls ? '✅ RENDERIZANDO VoiceControls' : '❌ NO RENDERIZANDO (DESMONTADO)'
+    })
+  }, [shouldRenderVoiceControls, gameId, localCognitoUsername, remoteCognitoUsername])
+  
   return (
     <BackgroundWrapper image={playBg}>
       {/* Controles de Chat de Voz */}
-      {gameId && localCognitoUsername && remoteCognitoUsername && (
+      {shouldRenderVoiceControls && (
         <VoiceControls
           gameId={gameId}
           localCognitoUsername={localCognitoUsername}
