@@ -194,41 +194,71 @@ function GameMultiplayerProviderInner({
       // GAME_WON y GAME_LOST pueden venir del oponente (indicando que el oponente ganó/perdió)
       // o pueden venir del jugador local (indicando que el jugador local ganó/perdió, por lo que el oponente perdió/ganó)
       
-      // Procesar ROUND_COMPLETE solo si viene del oponente
-      if (message.playerId !== playerId) {
-        // Verificar si es un ROUND_COMPLETE por tipo o por action
-        const isRoundComplete = message.type === MessageType.ROUND_COMPLETE || 
-                                (message.type === MessageType.GAME_MESSAGE && 
-                                 message.payload?.action === 'ROUND_COMPLETE')
-        
-        if (isRoundComplete) {
-          console.log('🎉 El oponente completó una ronda!', {
-            messageType: message.type,
-            payload: message.payload
-          })
-          // Actualizar ante y blind del oponente desde el payload
-          // El payload contiene el blind que acaba de completar, necesitamos calcular el siguiente
-          const payloadData = message.payload?.data || message.payload
-          if (payloadData) {
-            const { ante, blind } = payloadData
-            console.log(`📊 ROUND_COMPLETE recibido - Ante: ${ante}, Blind: ${blind}`)
-            if (ante !== undefined && blind) {
-              // Calcular el siguiente blind después de completar
-              const next = getNextBlind(blind as 'small' | 'big' | 'boss', ante)
-              setOpponentAnte(next.ante)
-              setOpponentBlind(next.blind)
-              console.log(`📊 Oponente progreso actualizado: Ante ${next.ante}, Blind ${next.blind} (completó ${blind} en ante ${ante})`)
+        // Procesar ROUND_COMPLETE solo si viene del oponente
+        if (message.playerId !== playerId) {
+          // Verificar si es un ROUND_COMPLETE por tipo o por action
+          const isRoundComplete = message.type === MessageType.ROUND_COMPLETE || 
+                                  (message.type === MessageType.GAME_MESSAGE && 
+                                   message.payload?.action === 'ROUND_COMPLETE')
+          
+          if (isRoundComplete) {
+            console.log('🎉 ========== ROUND_COMPLETE DEL OPONENTE ==========')
+            console.log('🎉 Mensaje completo:', JSON.stringify(message, null, 2))
+            console.log('🎉 Tipo de mensaje:', message.type)
+            console.log('🎉 Payload:', message.payload)
+            console.log('🎉 VERIFICAR: ¿Se está desmontando algún componente después de esto?')
+            
+            // Actualizar ante y blind del oponente desde el payload
+            // El payload contiene el blind que acaba de completar, necesitamos calcular el siguiente
+            const payloadData = message.payload?.data || message.payload
+            if (payloadData) {
+              const { ante, blind } = payloadData
+              console.log(`📊 ROUND_COMPLETE recibido - Ante: ${ante}, Blind: ${blind}`)
+              
+              if (ante !== undefined && blind) {
+                // Calcular el siguiente blind después de completar
+                const next = getNextBlind(blind as 'small' | 'big' | 'boss', ante)
+                console.log(`📊 Calculando siguiente blind:`, {
+                  completado: { ante, blind },
+                  siguiente: next
+                })
+                
+                // CRÍTICO: Actualizar el estado del oponente ANTES de establecer opponentRoundComplete
+                // Esto asegura que el cronómetro tenga los datos correctos cuando se active
+                setOpponentAnte(next.ante)
+                setOpponentBlind(next.blind)
+                console.log(`📊 Oponente progreso actualizado: Ante ${next.ante}, Blind ${next.blind} (completó ${blind} en ante ${ante})`)
+                
+                // Establecer opponentRoundComplete después de actualizar el progreso
+                // Usar un pequeño delay para asegurar que el estado se actualice primero
+                setTimeout(() => {
+                  console.log('✅ Estableciendo opponentRoundComplete a true')
+                  setOpponentRoundComplete(true)
+                  
+                  // Resetear después de 5 segundos
+                  setTimeout(() => {
+                    console.log('⏱️ opponentRoundComplete establecido a false después de 5 segundos')
+                    setOpponentRoundComplete(false)
+                  }, 5000)
+                }, 50) // Pequeño delay para asegurar que el estado se actualice
+              } else {
+                console.warn('⚠️ ROUND_COMPLETE sin ante o blind válidos:', payloadData)
+                // Aún así establecer opponentRoundComplete para que el cronómetro pueda activarse
+                setOpponentRoundComplete(true)
+                setTimeout(() => {
+                  setOpponentRoundComplete(false)
+                }, 5000)
+              }
+            } else {
+              console.warn('⚠️ ROUND_COMPLETE sin payload.data:', message.payload)
+              // Aún así establecer opponentRoundComplete para que el cronómetro pueda activarse
+              setOpponentRoundComplete(true)
+              setTimeout(() => {
+                setOpponentRoundComplete(false)
+              }, 5000)
             }
-          } else {
-            console.warn('⚠️ ROUND_COMPLETE sin payload.data:', message.payload)
+            console.log('🎉 ==========================================')
           }
-          setOpponentRoundComplete(true)
-          console.log('✅ opponentRoundComplete establecido a true')
-          setTimeout(() => {
-            console.log('⏱️ opponentRoundComplete establecido a false después de 5 segundos')
-            setOpponentRoundComplete(false)
-          }, 5000)
-        }
         
         // Procesar GAME_LOST del oponente (el oponente perdió, yo gané)
         // IMPORTANTE: Solo procesar si el mensaje viene del oponente
@@ -344,39 +374,67 @@ function GameMultiplayerProviderInner({
       if (message.playerId !== playerId && message.payload) {
         const { action, data } = message.payload
         
-        console.log('👥 Acción del oponente:', action, data)
+        console.log('👥 Acción del oponente recibida:', action, data)
         
         switch (action) {
           case 'PLAY_HAND':
-            setOpponentScore(data.newScore || 0)
-            setOpponentHands(data.handsRemaining || 0)
+            console.log('🎮 Oponente jugó una mano:', data)
+            if (data.newScore !== undefined) {
+              setOpponentScore(data.newScore)
+              console.log(`📊 Score del oponente actualizado: ${data.newScore}`)
+            }
+            if (data.handsRemaining !== undefined) {
+              setOpponentHands(data.handsRemaining)
+              console.log(`📊 Manos del oponente actualizado: ${data.handsRemaining}`)
+            }
             // No mostrar notificación de acciones del oponente
             break
             
           case 'DISCARD':
-            setOpponentDiscards(data.discardsRemaining || 0)
+            console.log('🗑️ Oponente descartó cartas:', data)
+            if (data.discardsRemaining !== undefined) {
+              setOpponentDiscards(data.discardsRemaining)
+              console.log(`📊 Descartas del oponente actualizado: ${data.discardsRemaining}`)
+            }
             // No mostrar notificación de acciones del oponente
             break
             
           case 'BUY_ITEM':
-            setOpponentMoney(data.newMoney || 0)
+            console.log('🛒 Oponente compró un item:', data)
+            if (data.newMoney !== undefined) {
+              setOpponentMoney(data.newMoney)
+              console.log(`📊 Dinero del oponente actualizado: ${data.newMoney}`)
+            }
             // No mostrar notificación de acciones del oponente
             break
             
           case 'UPDATE_STATE':
-            // IMPORTANTE: Solo actualizar ante/blind si realmente cambiaron
-            // Esto evita que comprar jokers (que solo cambia money) afecte el cronómetro
-            if (data.score !== undefined) setOpponentScore(data.score)
-            if (data.money !== undefined) setOpponentMoney(data.money)
-            if (data.hands !== undefined) setOpponentHands(data.hands)
-            if (data.discards !== undefined) setOpponentDiscards(data.discards)
-            // Solo actualizar ante/blind si los valores son diferentes a los actuales
-            // Esto previene actualizaciones innecesarias que podrían detener el cronómetro incorrectamente
-            if (data.ante !== undefined && data.ante !== opponentAnte) {
+            console.log('🔄 UPDATE_STATE del oponente recibido:', data)
+            // IMPORTANTE: Actualizar todos los campos que vengan en el mensaje
+            // Esto asegura que la sincronización funcione correctamente
+            if (data.score !== undefined) {
+              setOpponentScore(data.score)
+              console.log(`📊 Score del oponente actualizado: ${data.score}`)
+            }
+            if (data.money !== undefined) {
+              setOpponentMoney(data.money)
+              console.log(`📊 Dinero del oponente actualizado: ${data.money}`)
+            }
+            if (data.hands !== undefined) {
+              setOpponentHands(data.hands)
+              console.log(`📊 Manos del oponente actualizado: ${data.hands}`)
+            }
+            if (data.discards !== undefined) {
+              setOpponentDiscards(data.discards)
+              console.log(`📊 Descartas del oponente actualizado: ${data.discards}`)
+            }
+            // CRÍTICO: Actualizar ante/blind SIEMPRE que vengan en el mensaje
+            // Esto es necesario para la sincronización correcta, especialmente en Azure
+            if (data.ante !== undefined) {
               console.log(`📊 Actualizando ante del oponente: ${opponentAnte} -> ${data.ante}`)
               setOpponentAnte(data.ante)
             }
-            if (data.blind !== undefined && data.blind !== opponentBlind) {
+            if (data.blind !== undefined) {
               console.log(`📊 Actualizando blind del oponente: ${opponentBlind} -> ${data.blind}`)
               setOpponentBlind(data.blind)
             }
@@ -441,29 +499,51 @@ function GameMultiplayerProviderInner({
   }, [isWebSocketReady])
 
   // Sincronizar acciones propias con el backend
+  // IMPORTANTE: Enviar UPDATE_STATE cuando cambian los datos del jugador local
+  // Esto asegura que el oponente siempre tenga la información más reciente
   useEffect(() => {
-    // Cuando se juega una mano, notificar al oponente
+    // Solo enviar si el WebSocket está listo y conectado
+    if (!isWebSocketReady || !webSocketService.isWebSocketConnected()) {
+      console.log('⏳ WebSocket no está listo, omitiendo sincronización de estado')
+      return
+    }
+    
+    // Cuando cambian los datos del juego, notificar al oponente
     const score = game.gameState.currentRound.score
     const hands = game.gameState.currentRound.handsRemaining
     const money = game.gameState.money
+    const discards = game.gameState.currentRound.discardsRemaining
+    const ante = game.gameState.ante
+    const blind = game.gameState.blind
     
-    if (score > 0) {
-      sendGameAction('UPDATE_STATE', {
-        score,
-        money,
-        hands,
-        discards: game.gameState.currentRound.discardsRemaining,
-        ante: game.gameState.ante,
-        blind: game.gameState.blind
-      })
-    }
+    // Enviar UPDATE_STATE con todos los datos actuales
+    // Esto asegura que el oponente tenga la información más reciente
+    console.log('📤 Enviando UPDATE_STATE al oponente:', {
+      score,
+      money,
+      hands,
+      discards,
+      ante,
+      blind
+    })
+    
+    sendGameAction('UPDATE_STATE', {
+      score,
+      money,
+      hands,
+      discards,
+      ante,
+      blind
+    })
   }, [
     game.gameState.currentRound.score,
     game.gameState.currentRound.handsRemaining,
     game.gameState.money,
     game.gameState.ante,
     game.gameState.blind,
-    sendGameAction
+    game.gameState.currentRound.discardsRemaining,
+    sendGameAction,
+    isWebSocketReady
   ])
 
   const value: GameMultiplayerContextValue = useMemo(() => ({

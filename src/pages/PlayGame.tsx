@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import BackgroundWrapper from '../components/BackgroundWrapper'
 import Card from '../components/game/Card'
 import JokerCard from '../components/game/JokerCard'
@@ -14,6 +15,7 @@ import type { ShopItem } from '../types/shop'
 import background from '../assets/backgrounds/generalBackground.png'
 
 export default function PlayGame() {
+  const navigate = useNavigate()
   const [showShop, setShowShop] = useState(false)
   const { notifications, addNotification, removeNotification } = useNotifications()
 
@@ -101,6 +103,7 @@ export default function PlayGame() {
           <div className="jugarVictoriaAcciones">
             <button className="buttonRed" onClick={restartGame}>Reiniciar Juego</button>
             <button className="buttonBlue" onClick={() => setShowShop(true)}>Ir a la Tienda</button>
+            <button className="buttonPurple" onClick={() => navigate('/menu')}>Salir al Menú</button>
           </div>
         </div>
       </BackgroundWrapper>
@@ -132,9 +135,14 @@ export default function PlayGame() {
             <p className="jugarRecursoValor">{gameState.ante}</p>
           </div>
 
-          <button className="buttonGreen" onClick={restartGame}>
-            Intentar de Nuevo
-          </button>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+            <button className="buttonGreen" onClick={restartGame}>
+              Intentar de Nuevo
+            </button>
+            <button className="buttonPurple" onClick={() => navigate('/menu')}>
+              Salir al Menú
+            </button>
+          </div>
         </div>
       </BackgroundWrapper>
     )
@@ -260,7 +268,10 @@ export default function PlayGame() {
           </button>
         </div>
 
-        <button className="buttonRed" onClick={restartGame}>Reiniciar</button>
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '1rem' }}>
+          <button className="buttonRed" onClick={restartGame}>Reiniciar</button>
+          <button className="buttonPurple" onClick={() => navigate('/menu')}>Salir al Menú</button>
+        </div>
 
       </div>
 

@@ -81,19 +81,40 @@ function PlayMultiplayerGame() {
   // Obtener username de Cognito del oponente
   // IMPORTANTE: El opponentId debe ser el username de Cognito, no un UUID
   useEffect(() => {
+    console.log('🔍 [PlayMultiplayer] opponentId changed, verificando para voice chat:', opponentId)
+    
     if (opponentId) {
       // Verificar que opponentId sea un username de Cognito válido
       const isCognitoUsername = !opponentId.startsWith('player-') && 
                                 !opponentId.startsWith('opponent-') &&
                                 !opponentId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
       
+      console.log('🔍 [PlayMultiplayer] ¿Es username de Cognito válido?', isCognitoUsername)
+      
       if (isCognitoUsername) {
-        setRemoteCognitoUsername(opponentId)
+        setRemoteCognitoUsername(prevValue => {
+          if (prevValue !== opponentId) {
+            console.log('🔄 [PlayMultiplayer] Actualizando remoteCognitoUsername:', {
+              prevValue,
+              newValue: opponentId,
+              IMPORTANTE: 'ESTO PUEDE CAUSAR REMOUNT DE VoiceControls'
+            })
+          }
+          return opponentId
+        })
         console.log('✅ Username de Cognito remoto obtenido:', opponentId)
       } else {
         console.warn('⚠️ ADVERTENCIA: opponentId no es un username de Cognito válido:', opponentId)
         console.warn('⚠️ El chat de voz requiere que el backend envíe usernames de Cognito en lugar de UUIDs')
-        setRemoteCognitoUsername('')
+        setRemoteCognitoUsername(prevValue => {
+          if (prevValue !== '') {
+            console.log('🔄 [PlayMultiplayer] Limpiando remoteCognitoUsername (opponentId inválido)', {
+              prevValue,
+              invalidOpponentId: opponentId
+            })
+          }
+          return ''
+        })
       }
     }
   }, [opponentId])
@@ -573,8 +594,19 @@ function PlayMultiplayerGame() {
   // REGLA CRÍTICA: El cronómetro SOLO se activa si el OPONENTE está ADELANTE y completa una ronda
   // NUNCA se activa si el jugador local está adelante o al mismo nivel
   useEffect(() => {
+    console.log('⏰ Efecto del cronómetro ejecutado:', {
+      gameStatus: gameState.gameStatus,
+      opponentRoundComplete,
+      opponentAnte,
+      opponentBlind,
+      localAnte: gameState.ante,
+      localBlind: gameState.blind,
+      isOpponentWaiting
+    })
+    
     // Solo procesar si el juego está en curso
     if (gameState.gameStatus !== 'playing') {
+      console.log('⏰ Juego no está en curso, omitiendo cronómetro')
       return
     }
     
@@ -583,87 +615,95 @@ function PlayMultiplayerGame() {
       return
     }
     
-    // CRÍTICO: Verificación PRIMERO - comparar valores directamente
-    const localAnte = gameState.ante
-    const localBlind = gameState.blind
-    const oppAnte = opponentAnte
-    const oppBlind = opponentBlind
-    
-    const blindOrder = { small: 1, big: 2, boss: 3 }
-    const localBlindOrder = blindOrder[localBlind as keyof typeof blindOrder]
-    const oppBlindOrder = blindOrder[oppBlind as keyof typeof blindOrder]
-    
-    // Verificar si el OPONENTE está adelante (no el jugador local)
-    let opponentIsAhead = false
-    if (oppAnte > localAnte) {
-      opponentIsAhead = true
-    } else if (oppAnte === localAnte && oppBlindOrder > localBlindOrder) {
-      opponentIsAhead = true
-    }
-    
-    // Verificar si están al mismo nivel
-    const sameLevel = oppAnte === localAnte && oppBlindOrder === localBlindOrder
-    
-    // Verificar si el jugador local está adelante
-    const localIsAhead = localAnte > oppAnte || (localAnte === oppAnte && localBlindOrder > oppBlindOrder)
-    
-    console.log('🔍 VERIFICACIÓN CRÍTICA al recibir ROUND_COMPLETE:', {
-      local: { ante: localAnte, blind: localBlind, blindOrder: localBlindOrder },
-      opponent: { ante: oppAnte, blind: oppBlind, blindOrder: oppBlindOrder },
-      opponentIsAhead,
-      localIsAhead,
-      sameLevel,
-      shouldActivateTimer: opponentIsAhead && !sameLevel && !localIsAhead
-    })
-    
-    // REGLA ABSOLUTA: Si el jugador local está adelante o al mismo nivel, NUNCA activar cronómetro
-    if (localIsAhead || sameLevel) {
-      // Detener cualquier cronómetro activo inmediatamente
-      if (timerRef.current !== null || isOpponentWaiting) {
-        console.log('🛑 DETENIENDO cronómetro: jugador local está adelante o al mismo nivel')
-        stopTimer()
-      }
-      console.log('❌ NO se inicia cronómetro: jugador local adelante o mismo nivel')
-      return // SALIR INMEDIATAMENTE - no procesar más
-    }
-    
-    // SOLO continuar si el oponente está adelante
-    if (!opponentIsAhead) {
-      console.log('❌ NO se inicia cronómetro: oponente NO está adelante')
-      // Detener cualquier cronómetro activo
-      if (timerRef.current !== null || isOpponentWaiting) {
-        stopTimer()
-      }
-      return
-    }
-    
-    // Verificar si el oponente acaba de completar una ronda nueva
-    const currentOpponentRound = { ante: oppAnte, blind: oppBlind }
-    const isNewRound = !lastOpponentRoundRef.current || 
-                       lastOpponentRoundRef.current.ante !== currentOpponentRound.ante ||
-                       lastOpponentRoundRef.current.blind !== currentOpponentRound.blind
-    
-    // SOLO iniciar cronómetro si:
-    // 1. El oponente completó una ronda nueva
-    // 2. El oponente está adelante (ya verificado arriba)
-    // 3. El jugador local está atrás (ya verificado arriba)
-    if (isNewRound && opponentIsAhead && !localIsAhead && !sameLevel) {
-      lastOpponentRoundRef.current = currentOpponentRound
+    // CRÍTICO: Usar un pequeño delay para asegurar que el estado se haya actualizado
+    // Esto es especialmente importante en Azure donde puede haber latencia
+    const checkTimer = setTimeout(() => {
+      // CRÍTICO: Verificación PRIMERO - comparar valores directamente
+      const localAnte = gameState.ante
+      const localBlind = gameState.blind
+      const oppAnte = opponentAnte
+      const oppBlind = opponentBlind
       
-      // Verificación final antes de iniciar
-      if (timerRef.current === null && !isOpponentWaiting) {
-        console.log('✅ INICIANDO cronómetro: oponente adelante completó nueva ronda, jugador local atrás')
-        startTimer()
-      } else {
-        console.log('⏸️ Cronómetro ya está activo, continuando con tiempo restante')
+      const blindOrder = { small: 1, big: 2, boss: 3 }
+      const localBlindOrder = blindOrder[localBlind as keyof typeof blindOrder]
+      const oppBlindOrder = blindOrder[oppBlind as keyof typeof blindOrder]
+      
+      // Verificar si el OPONENTE está adelante (no el jugador local)
+      let opponentIsAhead = false
+      if (oppAnte > localAnte) {
+        opponentIsAhead = true
+      } else if (oppAnte === localAnte && oppBlindOrder > localBlindOrder) {
+        opponentIsAhead = true
       }
-    } else {
-      console.log('❌ NO se inicia cronómetro:', {
-        isNewRound,
+      
+      // Verificar si están al mismo nivel
+      const sameLevel = oppAnte === localAnte && oppBlindOrder === localBlindOrder
+      
+      // Verificar si el jugador local está adelante
+      const localIsAhead = localAnte > oppAnte || (localAnte === oppAnte && localBlindOrder > oppBlindOrder)
+      
+      console.log('🔍 VERIFICACIÓN CRÍTICA al recibir ROUND_COMPLETE:', {
+        local: { ante: localAnte, blind: localBlind, blindOrder: localBlindOrder },
+        opponent: { ante: oppAnte, blind: oppBlind, blindOrder: oppBlindOrder },
         opponentIsAhead,
         localIsAhead,
-        sameLevel
+        sameLevel,
+        shouldActivateTimer: opponentIsAhead && !sameLevel && !localIsAhead
       })
+      
+      // REGLA ABSOLUTA: Si el jugador local está adelante o al mismo nivel, NUNCA activar cronómetro
+      if (localIsAhead || sameLevel) {
+        // Detener cualquier cronómetro activo inmediatamente
+        if (timerRef.current !== null || isOpponentWaiting) {
+          console.log('🛑 DETENIENDO cronómetro: jugador local está adelante o al mismo nivel')
+          stopTimer()
+        }
+        console.log('❌ NO se inicia cronómetro: jugador local adelante o mismo nivel')
+        return // SALIR INMEDIATAMENTE - no procesar más
+      }
+      
+      // SOLO continuar si el oponente está adelante
+      if (!opponentIsAhead) {
+        console.log('❌ NO se inicia cronómetro: oponente NO está adelante')
+        // Detener cualquier cronómetro activo
+        if (timerRef.current !== null || isOpponentWaiting) {
+          stopTimer()
+        }
+        return
+      }
+      
+      // Verificar si el oponente acaba de completar una ronda nueva
+      const currentOpponentRound = { ante: oppAnte, blind: oppBlind }
+      const isNewRound = !lastOpponentRoundRef.current || 
+                         lastOpponentRoundRef.current.ante !== currentOpponentRound.ante ||
+                         lastOpponentRoundRef.current.blind !== currentOpponentRound.blind
+      
+      // SOLO iniciar cronómetro si:
+      // 1. El oponente completó una ronda nueva
+      // 2. El oponente está adelante (ya verificado arriba)
+      // 3. El jugador local está atrás (ya verificado arriba)
+      if (isNewRound && opponentIsAhead && !localIsAhead && !sameLevel) {
+        lastOpponentRoundRef.current = currentOpponentRound
+        
+        // Verificación final antes de iniciar
+        if (timerRef.current === null && !isOpponentWaiting) {
+          console.log('✅ INICIANDO cronómetro: oponente adelante completó nueva ronda, jugador local atrás')
+          startTimer()
+        } else {
+          console.log('⏸️ Cronómetro ya está activo, continuando con tiempo restante')
+        }
+      } else {
+        console.log('❌ NO se inicia cronómetro:', {
+          isNewRound,
+          opponentIsAhead,
+          localIsAhead,
+          sameLevel
+        })
+      }
+    }, 100) // Pequeño delay para asegurar que el estado se actualice
+    
+    return () => {
+      clearTimeout(checkTimer)
     }
   }, [opponentRoundComplete, opponentAnte, opponentBlind, gameState.gameStatus, gameState.ante, gameState.blind, isOpponentWaiting, startTimer, stopTimer])
   
@@ -1068,10 +1108,23 @@ function PlayMultiplayerGame() {
   // -----------------------
   // JUEGO NORMAL MULTIJUGADOR
   // -----------------------
+  
+  // Log para detectar cuándo VoiceControls se renderiza/desmonta
+  const shouldRenderVoiceControls = gameId && localCognitoUsername && remoteCognitoUsername
+  useEffect(() => {
+    console.log('🎙️ [PlayMultiplayer] VoiceControls render condition changed:', {
+      shouldRender: shouldRenderVoiceControls,
+      gameId,
+      localCognitoUsername,
+      remoteCognitoUsername,
+      WARNING: shouldRenderVoiceControls ? '✅ RENDERIZANDO VoiceControls' : '❌ NO RENDERIZANDO (DESMONTADO)'
+    })
+  }, [shouldRenderVoiceControls, gameId, localCognitoUsername, remoteCognitoUsername])
+  
   return (
     <BackgroundWrapper image={playBg}>
       {/* Controles de Chat de Voz */}
-      {gameId && localCognitoUsername && remoteCognitoUsername && (
+      {shouldRenderVoiceControls && (
         <VoiceControls
           gameId={gameId}
           localCognitoUsername={localCognitoUsername}

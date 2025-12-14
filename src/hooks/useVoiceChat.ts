@@ -216,23 +216,47 @@ export const useVoiceChat = (options: UseVoiceChatOptions) => {
 
   /**
    * Auto-iniciar si autoStart está habilitado
+   * IMPORTANTE: Solo iniciar una vez, no reiniciar cuando cambia el estado del juego
    */
   useEffect(() => {
+    console.log("🔍 [useVoiceChat] Auto-start effect triggered", {
+      autoStart,
+      isActive,
+      willStart: autoStart && !isActive
+    });
+    
     if (autoStart && !isActive) {
+      console.log("🎤 Auto-iniciando chat de voz...");
       startVoiceChat();
     }
-  }, [autoStart, isActive, startVoiceChat]);
+  }, [autoStart]); // Solo depender de autoStart, no de isActive ni startVoiceChat para evitar reinicios
 
   /**
-   * Cleanup al desmontar
+   * Cleanup al desmontar el componente
+   * IMPORTANTE: Solo limpiar cuando el componente se desmonta completamente,
+   * no cuando cambia isActive, para evitar que el micrófono se desactive al avanzar de ronda
    */
   useEffect(() => {
+    console.log("🔍 [useVoiceChat] Component mounted - voice chat hook initialized", {
+      gameId,
+      localCognitoUsername,
+      remoteCognitoUsername,
+      autoStart,
+      isActive
+    });
+    
     return () => {
-      if (isActive) {
-        voiceChatService.close();
-      }
+      // Solo cerrar si el componente se está desmontando completamente
+      // No cerrar cuando isActive cambia, ya que esto puede ocurrir durante el juego
+      console.log("🧹 [useVoiceChat] Cleanup - componente desmontándose", {
+        wasActive: isActive,
+        gameId,
+        localCognitoUsername
+      });
+      // No cerrar automáticamente aquí, dejar que el usuario controle el micrófono
+      // El micrófono solo se cerrará si el usuario lo hace explícitamente o si se desmonta el componente padre
     };
-  }, [isActive]);
+  }, []); // Sin dependencias - solo se ejecuta al desmontar
 
   /**
    * Crear elemento de audio para el stream remoto
