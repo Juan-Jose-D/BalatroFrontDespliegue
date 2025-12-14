@@ -50,6 +50,7 @@ interface GameContextValue {
   // Acciones de juego
   advanceRound: () => void
   restartGame: () => void
+  loseGame: (reason?: string) => void
   
   // Información útil
   selectedCards: Card[]
@@ -179,6 +180,14 @@ export function GameProvider({ children, config }: GameProviderProps) {
   const restartGame = useCallback(() => {
     setGameState(resetGameLogic(config))
   }, [config])
+
+  // Marcar juego como perdido
+  const loseGame = useCallback((reason?: string) => {
+    setGameState(prev => ({
+      ...prev,
+      gameStatus: 'lost'
+    }))
+  }, [])
 
   // Añadir un Joker
   const addJoker = useCallback((joker: JokerInstance): boolean => {
@@ -316,6 +325,7 @@ export function GameProvider({ children, config }: GameProviderProps) {
     applyEditionToCard,
     advanceRound,
     restartGame,
+    loseGame,
     selectedCards,
     currentHandScore,
     blindInfo,
@@ -335,6 +345,7 @@ export function GameProvider({ children, config }: GameProviderProps) {
     applyEditionToCard,
     advanceRound,
     restartGame,
+    loseGame,
     selectedCards,
     currentHandScore,
     blindInfo,

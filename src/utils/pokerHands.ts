@@ -16,13 +16,38 @@ export function detectPokerHand(cards: Card[]): PokerHandType {
     throw new Error('No se pueden evaluar más de 5 cartas')
   }
 
+  // Si hay menos de 5 cartas, solo puede ser carta alta, pareja, trío, etc.
+  // No puede ser flush ni straight (requieren exactamente 5 cartas)
+  if (cards.length < 5) {
+    // Ordenar cartas por valor descendente
+    const sorted = [...cards].sort((a, b) => RANK_VALUES[b.rank] - RANK_VALUES[a.rank])
+    
+    // Contar ocurrencias de cada rango
+    const rankCounts = countRanks(sorted)
+    const counts = Object.values(rankCounts).sort((a, b) => b - a)
+
+    // Trío (3 iguales)
+    if (counts[0] === 3) {
+      return 'three_of_a_kind'
+    }
+
+    // Pareja
+    if (counts[0] === 2) {
+      return 'pair'
+    }
+
+    // Carta Alta
+    return 'high_card'
+  }
+
+  // Para 5 cartas, verificar todas las combinaciones posibles
   // Ordenar cartas por valor descendente
   const sorted = [...cards].sort((a, b) => RANK_VALUES[b.rank] - RANK_VALUES[a.rank])
 
-  // Verificar flush (todas del mismo palo)
-  const isFlush = cards.every(card => card.suit === cards[0].suit)
+  // Verificar flush (EXACTAMENTE 5 cartas del mismo palo)
+  const isFlush = cards.length === 5 && cards.every(card => card.suit === cards[0].suit)
   
-  // Verificar straight (secuencia)
+  // Verificar straight (EXACTAMENTE 5 cartas en secuencia)
   const isStraight = checkStraight(sorted)
   
   // Contar ocurrencias de cada rango
@@ -34,7 +59,7 @@ export function detectPokerHand(cards: Card[]): PokerHandType {
     return 'royal_flush'
   }
 
-  // Escalera de Color
+  // Escalera de Color (5 cartas del mismo palo en secuencia)
   if (isFlush && isStraight) {
     return 'straight_flush'
   }
@@ -49,13 +74,13 @@ export function detectPokerHand(cards: Card[]): PokerHandType {
     return 'full_house'
   }
 
-  // Color (todas del mismo palo)
-  if (isFlush) {
+  // Color (5 cartas del mismo palo, pero NO en secuencia)
+  if (isFlush && !isStraight) {
     return 'flush'
   }
 
-  // Escalera
-  if (isStraight) {
+  // Escalera (5 cartas en secuencia, pero NO del mismo palo)
+  if (isStraight && !isFlush) {
     return 'straight'
   }
 
@@ -64,7 +89,7 @@ export function detectPokerHand(cards: Card[]): PokerHandType {
     return 'three_of_a_kind'
   }
 
-  // Doble Pareja
+  // Doble Pareja (2 parejas diferentes)
   if (counts[0] === 2 && counts[1] === 2) {
     return 'two_pair'
   }
@@ -80,13 +105,19 @@ export function detectPokerHand(cards: Card[]): PokerHandType {
 
 /**
  * Verifica si las cartas forman una escalera
+ * IMPORTANTE: Requiere exactamente 5 cartas sin duplicados
  */
 function checkStraight(sortedCards: Card[]): boolean {
-  if (sortedCards.length < 5) return false
+  if (sortedCards.length !== 5) return false
+
+  // Verificar que no haya cartas duplicadas (no puede ser escalera si hay duplicados)
+  const ranks = sortedCards.map(c => c.rank)
+  const uniqueRanks = new Set(ranks)
+  if (uniqueRanks.size !== 5) return false
 
   const values = sortedCards.map(c => RANK_VALUES[c.rank])
 
-  // Verificar escalera normal
+  // Verificar escalera normal (ej: 10-J-Q-K-A o 2-3-4-5-6)
   let isSequential = true
   for (let i = 0; i < values.length - 1; i++) {
     if (values[i] - values[i + 1] !== 1) {
@@ -98,12 +129,15 @@ function checkStraight(sortedCards: Card[]): boolean {
   if (isSequential) return true
 
   // Verificar escalera baja con As (A-2-3-4-5)
+  // En este caso, el As vale 1, no 14
   if (sortedCards[0].rank === 'A') {
-    const sorted = sortedCards.map(c => RANK_VALUES[c.rank])
-    
-    if (sorted.length === 5 && 
-        sorted[0] === 14 && sorted[1] === 5 && 
-        sorted[2] === 4 && sorted[3] === 3 && sorted[4] === 2) {
+    // Verificar que las otras 4 cartas sean 2, 3, 4, 5
+    const otherRanks = ranks.slice(1).sort()
+    if (otherRanks.length === 4 && 
+        otherRanks[0] === '2' && 
+        otherRanks[1] === '3' && 
+        otherRanks[2] === '4' && 
+        otherRanks[3] === '5') {
       return true
     }
   }
