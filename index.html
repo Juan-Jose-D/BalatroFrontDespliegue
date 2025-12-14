@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>balatro-client</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Victor+Mono:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
+
+
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // Polyfill para sockjs-client en navegadores
+      window.global = window;
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
