@@ -36,14 +36,15 @@ export const BACKEND_WS_URL = `${backendConfig.baseUrl}${backendConfig.wsEndpoin
 export const BACKEND_BASE_URL = backendConfig.baseUrl;
 
 // Log de la URL configurada para debugging
-if (import.meta.env.MODE === "development") {
-  console.log("🔧 Configuración del backend:", {
-    baseUrl: backendConfig.baseUrl,
-    wsEndpoint: backendConfig.wsEndpoint,
-    wsUrl: BACKEND_WS_URL,
-    isDevelopment: isDevelopment
-  });
-}
+console.log("🔧 ========== CONFIGURACIÓN DEL BACKEND ==========");
+console.log("🔧 MODE:", import.meta.env.MODE);
+console.log("🔧 isDevelopment:", isDevelopment);
+console.log("🔧 VITE_BACKEND_URL:", import.meta.env.VITE_BACKEND_URL);
+console.log("🔧 baseUrl (final):", backendConfig.baseUrl);
+console.log("🔧 wsEndpoint:", backendConfig.wsEndpoint);
+console.log("🔧 BACKEND_WS_URL (final):", BACKEND_WS_URL);
+console.log("🔧 BACKEND_BASE_URL (final):", BACKEND_BASE_URL);
+console.log("🔧 ================================================");
 
 
 export const WS_TOPICS = {

@@ -52,6 +52,15 @@ export class WebSocketService {
 
     this.playerId = playerId;
 
+    console.log(`🔌 ========== INICIALIZANDO WEBSOCKET ==========`);
+    console.log(`🔌 PlayerId: ${playerId}`);
+    console.log(`🔌 BACKEND_WS_URL: ${BACKEND_WS_URL}`);
+    console.log(`🔌 Protocol: ${BACKEND_WS_URL.startsWith('https') ? 'WSS (Secure)' : 'WS (Insecure)'}`);
+    console.log(`🔌 AccessToken: ${accessToken ? 'Sí' : 'No'}`);
+    console.log(`🔌 Window location: ${window.location.href}`);
+    console.log(`🔌 Window protocol: ${window.location.protocol}`);
+    console.log(`🔌 ==============================================`);
+
     return new Promise((resolve, reject) => {
       try {
         // Asegurar que no haya cliente anterior
