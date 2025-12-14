@@ -56,6 +56,11 @@ function PlayMultiplayerGame() {
   } = useGameMultiplayer()
   
   const { isAuthenticated } = useAuth()
+  
+  // ⚡ CRÍTICO: Usar useRef para estabilizar usernames y prevenir remounts
+  // Una vez inicializados, estos valores NUNCA cambian durante la sesión de juego
+  const stableLocalUsernameRef = useRef<string>('')
+  const stableRemoteUsernameRef = useRef<string>('')
   const [localCognitoUsername, setLocalCognitoUsername] = useState<string>('')
   const [remoteCognitoUsername, setRemoteCognitoUsername] = useState<string>('')
   
@@ -65,11 +70,12 @@ function PlayMultiplayerGame() {
   // Obtener username de Cognito del jugador local
   useEffect(() => {
     const initializeCognitoUsernames = async () => {
-      if (isAuthenticated) {
+      if (isAuthenticated && !stableLocalUsernameRef.current) {
         try {
           const cognitoUsername = await getPlayerId()
+          stableLocalUsernameRef.current = cognitoUsername
           setLocalCognitoUsername(cognitoUsername)
-          console.log('✅ Username de Cognito local obtenido:', cognitoUsername)
+          console.log('✅ Username de Cognito local obtenido y estabilizado:', cognitoUsername)
         } catch (error) {
           console.error('❌ Error al obtener username de Cognito:', error)
         }
@@ -83,7 +89,7 @@ function PlayMultiplayerGame() {
   useEffect(() => {
     console.log('🔍 [PlayMultiplayer] opponentId changed, verificando para voice chat:', opponentId)
     
-    if (opponentId) {
+    if (opponentId && !stableRemoteUsernameRef.current) {
       // Verificar que opponentId sea un username de Cognito válido
       const isCognitoUsername = !opponentId.startsWith('player-') && 
                                 !opponentId.startsWith('opponent-') &&
@@ -92,44 +98,15 @@ function PlayMultiplayerGame() {
       console.log('🔍 [PlayMultiplayer] ¿Es username de Cognito válido?', isCognitoUsername)
       
       if (isCognitoUsername) {
-        setRemoteCognitoUsername(prevValue => {
-          if (prevValue !== opponentId) {
-            console.log('🔄 [PlayMultiplayer] Actualizando remoteCognitoUsername:', {
-              prevValue,
-              newValue: opponentId,
-              IMPORTANTE: 'ESTO PUEDE CAUSAR REMOUNT DE VoiceControls'
-            })
-          }
-          return opponentId
-        })
-        console.log('✅ Username de Cognito remoto obtenido:', opponentId)
+        stableRemoteUsernameRef.current = opponentId
+        setRemoteCognitoUsername(opponentId)
+        console.log('✅ Username de Cognito remoto obtenido y estabilizado:', opponentId)
       } else {
         console.warn('⚠️ ADVERTENCIA: opponentId no es un username de Cognito válido:', opponentId)
         console.warn('⚠️ El chat de voz requiere que el backend envíe usernames de Cognito en lugar de UUIDs')
-        setRemoteCognitoUsername(prevValue => {
-          if (prevValue !== '') {
-            console.log('🔄 [PlayMultiplayer] Limpiando remoteCognitoUsername (opponentId inválido)', {
-              prevValue,
-              invalidOpponentId: opponentId
-            })
-          }
-          return ''
-        })
       }
     }
   }, [opponentId])
-  
-  // Log para debug
-  useEffect(() => {
-    if (gameId && localCognitoUsername && remoteCognitoUsername) {
-      console.log('🎤 Chat de Voz - Configuración:', {
-        gameId,
-        localCognitoUsername,
-        remoteCognitoUsername,
-        ambosUsernamesValidos: !!(localCognitoUsername && remoteCognitoUsername)
-      })
-    }
-  }, [gameId, localCognitoUsername, remoteCognitoUsername])
   
   // Verificar si el WebSocket está conectado
   const [isConnected, setIsConnected] = useState(false)
@@ -923,13 +900,13 @@ function PlayMultiplayerGame() {
   // CRÍTICO: Monitorear las variables que controlan el renderizado de VoiceControls
   // DEBE estar ANTES de cualquier return temprano para evitar React error #300
   useEffect(() => {
-    console.log('🎙️ [PlayMultiplayer] VoiceControls dependencies:', {
+    console.log('🎙️ [PlayMultiplayer] VoiceControls dependencies (STABLE refs):', {
       gameId,
-      localCognitoUsername,
-      remoteCognitoUsername,
-      willRender: !!(gameId && localCognitoUsername && remoteCognitoUsername)
+      stableLocalUsername: stableLocalUsernameRef.current,
+      stableRemoteUsername: stableRemoteUsernameRef.current,
+      willRender: !!(gameId && stableLocalUsernameRef.current && stableRemoteUsernameRef.current)
     });
-  }, [gameId, localCognitoUsername, remoteCognitoUsername]);
+  }, [gameId]);
 
   const handleSendChat = () => {
     if (chatInput.trim()) {
@@ -1121,12 +1098,12 @@ function PlayMultiplayerGame() {
   // -----------------------
   return (
     <BackgroundWrapper image={playBg}>
-      {/* Controles de Chat de Voz */}
-      {gameId && localCognitoUsername && remoteCognitoUsername && (
+      {/* Controles de Chat de Voz - USANDO VALORES ESTABLES DESDE REFS */}
+      {gameId && stableLocalUsernameRef.current && stableRemoteUsernameRef.current && (
         <VoiceControls
           gameId={gameId}
-          localCognitoUsername={localCognitoUsername}
-          remoteCognitoUsername={remoteCognitoUsername}
+          localCognitoUsername={stableLocalUsernameRef.current}
+          remoteCognitoUsername={stableRemoteUsernameRef.current}
         />
       )}
 
@@ -1382,5 +1359,7 @@ export default function PlayMultiplayer() {
     return null
   }
 
-  return <PlayMultiplayerGame />
+  // CRÍTICO: Usar key para evitar remounts innecesarios que desmontarían VoiceControls
+  // La key debe ser estable durante toda la partida
+  return <PlayMultiplayerGame key={`game-${gameId}-${playerId}`} />
 }
